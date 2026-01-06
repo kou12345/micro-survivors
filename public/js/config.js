@@ -8,6 +8,9 @@ export const CONFIG = {
     PLAYER_MAX_HP: 100,
     XP_TO_LEVEL: level => Math.floor(10 * Math.pow(1.2, level - 1)),
 
+    // Weapon system settings
+    MAX_WEAPONS: 4,                 // 最大武器所持数
+
     // Wave system settings
     WAVE_INTERVAL: 30 * 1000,       // 30秒ごとにウェーブ発生
     WAVE_BASE_ENEMIES: 15,          // 基本敵数
