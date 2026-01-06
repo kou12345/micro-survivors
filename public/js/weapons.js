@@ -108,4 +108,14 @@ export const ENEMY_TYPES = {
         width: 30,
         height: 12,
     },
+    boss: {
+        name: '耐性菌ボス',
+        color: '#e056fd',
+        size: 40,
+        hp: 200,
+        speed: 0.5,
+        damage: 20,
+        xp: 50,
+        isBoss: true,
+    },
 };

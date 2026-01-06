@@ -99,6 +99,20 @@ function spawnWave(waveNumber) {
         }
     }
 
+    // Spawn boss at random position around player (always spawns, clamped to world bounds)
+    const bossAngle = Math.random() * Math.PI * 2;
+    const bossDist = Math.max(CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT) / 2 + 150;
+    const bossX = Math.max(50, Math.min(CONFIG.WORLD_SIZE - 50, _player.x + Math.cos(bossAngle) * bossDist));
+    const bossY = Math.max(50, Math.min(CONFIG.WORLD_SIZE - 50, _player.y + Math.sin(bossAngle) * bossDist));
+
+    const boss = new Enemy('boss', bossX, bossY);
+    // Scale boss with wave number
+    boss.hp *= 1 + waveNumber * 0.5;
+    boss.maxHp = boss.hp;
+    boss.damage *= 1 + waveNumber * 0.2;
+    boss.xp *= 1 + waveNumber * 0.3;
+    enemies.push(boss);
+
     Sound.explosion(); // Wave arrival sound
 }
 
@@ -266,7 +280,7 @@ function update(dt) {
             for (const enemy of enemies) {
                 const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
                 if (dist < enemy.size + p.size) {
-                    enemy.takeDamage(p.damage);
+                    enemy.takeDamage(p.damage, 'enzyme');
                     createHitEffect(p.x, p.y, p.color);
                     projectiles.splice(i, 1);
                     break;
@@ -280,11 +294,11 @@ function update(dt) {
             p.timer -= dt;
             if (p.timer <= 0) {
                 // Explode
-                Sound.explosion();
+                Sound.hitAtp();
                 for (const enemy of enemies) {
                     const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
                     if (dist < p.radius + enemy.size) {
-                        enemy.takeDamage(p.damage);
+                        enemy.takeDamage(p.damage, 'atp');
                     }
                 }
 
