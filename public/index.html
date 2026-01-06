@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Micro Survivors</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -23,6 +23,12 @@
 
         <div id="weaponDisplay"></div>
 
+        <div id="joystickContainer">
+            <div id="joystickBase">
+                <div id="joystickStick"></div>
+            </div>
+        </div>
+
         <div id="levelUpMenu">
             <h2>LEVEL UP!</h2>
             <div id="upgradeOptions"></div>
@@ -31,6 +37,7 @@
         <div id="startScreen">
             <h1>MICRO SURVIVORS</h1>
             <p>WASD or Arrow keys to move</p>
+            <p id="mobileControlsInfo">Use joystick to move</p>
             <div class="time-select">
                 <p style="margin-bottom: 10px;">Select Time:</p>
                 <div class="time-buttons">

@@ -15,6 +15,18 @@ let lastTime = 0;
 let keys = {};
 let killCount = 0;
 
+// Mobile touch controls
+let joystick = {
+    active: false,
+    touchId: null,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    dx: 0,
+    dy: 0
+};
+
 // Local player reference
 let _player = null;
 
@@ -159,7 +171,7 @@ function update(dt) {
         return;
     }
 
-    _player.update(dt, keys);
+    _player.update(dt, keys, joystick);
 
     // Update camera
     camera.x = _player.x;
@@ -486,6 +498,96 @@ function handleSetGameTime(minutes) {
     Sound.click?.();
 }
 
+// Mobile joystick setup
+function setupJoystick() {
+    const joystickContainer = document.getElementById('joystickContainer');
+    const joystickBase = document.getElementById('joystickBase');
+    const joystickStick = document.getElementById('joystickStick');
+
+    if (!joystickContainer) return;
+
+    const maxDistance = 35; // Maximum stick travel distance
+
+    function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        const rect = joystickBase.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        joystick.active = true;
+        joystick.touchId = touch.identifier;
+        joystick.startX = centerX;
+        joystick.startY = centerY;
+        joystick.currentX = touch.clientX;
+        joystick.currentY = touch.clientY;
+
+        updateJoystickPosition(touch.clientX, touch.clientY);
+    }
+
+    function handleTouchMove(e) {
+        e.preventDefault();
+        if (!joystick.active) return;
+
+        for (const touch of e.changedTouches) {
+            if (touch.identifier === joystick.touchId) {
+                joystick.currentX = touch.clientX;
+                joystick.currentY = touch.clientY;
+                updateJoystickPosition(touch.clientX, touch.clientY);
+                break;
+            }
+        }
+    }
+
+    function handleTouchEnd(e) {
+        e.preventDefault();
+        for (const touch of e.changedTouches) {
+            if (touch.identifier === joystick.touchId) {
+                joystick.active = false;
+                joystick.touchId = null;
+                joystick.dx = 0;
+                joystick.dy = 0;
+                joystickStick.style.transform = 'translate(-50%, -50%)';
+                break;
+            }
+        }
+    }
+
+    function updateJoystickPosition(touchX, touchY) {
+        let dx = touchX - joystick.startX;
+        let dy = touchY - joystick.startY;
+
+        const distance = Math.hypot(dx, dy);
+        if (distance > maxDistance) {
+            dx = (dx / distance) * maxDistance;
+            dy = (dy / distance) * maxDistance;
+        }
+
+        // Normalize for game input (-1 to 1)
+        joystick.dx = dx / maxDistance;
+        joystick.dy = dy / maxDistance;
+
+        // Update visual position
+        joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    }
+
+    // Add touch event listeners
+    joystickContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+    joystickContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    joystickContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+    joystickContainer.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    // Prevent default touch behavior on canvas to avoid scrolling
+    canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+}
+
+// Check if device is mobile
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 600);
+}
+
 // Initialization
 export function init() {
     canvas = document.getElementById('gameCanvas');
@@ -496,13 +598,16 @@ export function init() {
     setGameOverCallback(gameOver);
     setKillCountCallback(() => killCount++);
 
-    // Input handling
+    // Input handling - keyboard
     window.addEventListener('keydown', e => {
         keys[e.key.toLowerCase()] = true;
     });
     window.addEventListener('keyup', e => {
         keys[e.key.toLowerCase()] = false;
     });
+
+    // Setup mobile joystick
+    setupJoystick();
 
     // Initialize empty player for title screen
     _player = new Player();
