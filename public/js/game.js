@@ -166,18 +166,24 @@ function generateUpgradeChoices() {
     const choices = [];
     const allOptions = [];
 
-    // Weapons player doesn't have
+    // Check current weapon count
+    const currentWeaponCount = Object.keys(_player.weapons).length;
+    const canAddNewWeapon = currentWeaponCount < CONFIG.MAX_WEAPONS;
+
+    // Weapons player doesn't have (only if under max weapons)
     for (const [type, def] of Object.entries(WEAPONS)) {
         if (!_player.weapons[type]) {
-            allOptions.push({
-                type: 'weapon',
-                key: type,
-                name: def.name,
-                desc: def.desc,
-                emoji: def.emoji,
-                levelText: 'NEW!',
-                science: def.science,
-            });
+            if (canAddNewWeapon) {
+                allOptions.push({
+                    type: 'weapon',
+                    key: type,
+                    name: def.name,
+                    desc: def.desc,
+                    emoji: def.emoji,
+                    levelText: 'NEW!',
+                    science: def.science,
+                });
+            }
         } else if (_player.weapons[type].level < 8) {
             allOptions.push({
                 type: 'weapon',
