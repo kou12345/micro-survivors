@@ -563,6 +563,21 @@ export class Enemy {
         this.adccTimer = 0;
         this.opsonized = false;
         this.lastDamageSource = null; // Track what weapon dealt the last damage
+
+        // Boss pattern properties
+        this.bossPattern = def.bossPattern || null;
+        this.splitThresholds = def.splitThresholds ? [...def.splitThresholds] : [];
+        this.splitCount = def.splitCount || 0;
+        this.bossAttackCooldown = def.attackCooldown || 0;
+        this.bossProjectileSpeed = def.projectileSpeed || 0;
+        this.bossProjectileDamage = def.projectileDamage || 0;
+        this.bossProjectileCount = def.projectileCount || 0;
+        this.spawnCooldown = def.spawnCooldown || 0;
+        this.spawnCount = def.spawnCount || 0;
+        this.lastBossAttack = 0;
+        this.lastSpawn = 0;
+        this.isSpawning = false; // For spawn animation
+        this.spawnAnimTimer = 0;
     }
 
     update(dt, player) {
@@ -619,8 +634,87 @@ export class Enemy {
                     maxRange: this.attackRange * 1.5,
                 });
             }
+        } else if (this.bossPattern === 'ranged') {
+            // Cancer boss - ranged attack pattern
+            const now = performance.now();
+            const attackRange = 250;
+            const preferredRange = 180;
+
+            if (dist > attackRange) {
+                // Move toward player
+                if (dist > 0) {
+                    this.x += (dx / dist) * currentSpeed;
+                    this.y += (dy / dist) * currentSpeed;
+                }
+            } else if (dist < preferredRange * 0.7) {
+                // Move away from player if too close
+                if (dist > 0) {
+                    this.x -= (dx / dist) * currentSpeed * 0.6;
+                    this.y -= (dy / dist) * currentSpeed * 0.6;
+                }
+            }
+
+            // Fire spread projectiles
+            if (dist <= attackRange && now - this.lastBossAttack > this.bossAttackCooldown) {
+                this.lastBossAttack = now;
+                const baseAngle = Math.atan2(dy, dx);
+                const spreadAngle = Math.PI / 4; // 45 degree spread
+
+                for (let i = 0; i < this.bossProjectileCount; i++) {
+                    const angleOffset = (i - (this.bossProjectileCount - 1) / 2) * (spreadAngle / (this.bossProjectileCount - 1 || 1));
+                    const angle = baseAngle + angleOffset;
+                    enemyProjectiles.push({
+                        x: this.x,
+                        y: this.y,
+                        vx: Math.cos(angle) * this.bossProjectileSpeed,
+                        vy: Math.sin(angle) * this.bossProjectileSpeed,
+                        damage: this.bossProjectileDamage,
+                        size: 8,
+                        color: '#ff4757',
+                        traveled: 0,
+                        maxRange: 400,
+                    });
+                }
+            }
+        } else if (this.bossPattern === 'spawner') {
+            // Virus host - spawner pattern
+            const now = performance.now();
+
+            // Update spawn animation
+            if (this.isSpawning) {
+                this.spawnAnimTimer -= dt;
+                if (this.spawnAnimTimer <= 0) {
+                    this.isSpawning = false;
+                }
+            }
+
+            // Slowly chase player
+            if (!this.isSpawning && dist > 0) {
+                this.x += (dx / dist) * currentSpeed;
+                this.y += (dy / dist) * currentSpeed;
+            }
+
+            // Spawn mini viruses periodically
+            if (now - this.lastSpawn > this.spawnCooldown) {
+                this.lastSpawn = now;
+                this.isSpawning = true;
+                this.spawnAnimTimer = 500; // 0.5s spawn animation
+
+                for (let i = 0; i < this.spawnCount; i++) {
+                    const angle = (Math.PI * 2 / this.spawnCount) * i;
+                    const spawnDist = this.size + 20;
+                    const spawnX = this.x + Math.cos(angle) * spawnDist;
+                    const spawnY = this.y + Math.sin(angle) * spawnDist;
+
+                    const miniVirus = new Enemy('virus', spawnX, spawnY);
+                    miniVirus.hp *= 0.5; // Weaker than normal
+                    miniVirus.maxHp = miniVirus.hp;
+                    miniVirus.xp = Math.floor(miniVirus.xp * 0.5);
+                    enemies.push(miniVirus);
+                }
+            }
         } else {
-            // Melee enemy behavior (original)
+            // Melee enemy behavior (original) - includes amoeba boss and regular boss
             if (dist > 0) {
                 this.x += (dx / dist) * currentSpeed;
                 this.y += (dy / dist) * currentSpeed;
@@ -649,6 +743,16 @@ export class Enemy {
         this.hp -= finalDamage;
         this.lastDamagedBy = weaponType;
         this.lastDamageSource = weaponType; // Track killing blow source for synergy
+
+        // Amoeba boss split pattern - check all crossed thresholds
+        if (this.bossPattern === 'split' && this.splitThresholds.length > 0) {
+            const hpPercent = this.hp / this.maxHp;
+            // Loop to handle multiple threshold crossings from a single large hit
+            while (this.splitThresholds.length > 0 && hpPercent <= this.splitThresholds[0]) {
+                this.splitThresholds.shift(); // Remove used threshold
+                this.performSplit();
+            }
+        }
 
         // Show damage text (with "耐性!" indicator if resisted)
         if (isResisted) {
@@ -694,6 +798,34 @@ export class Enemy {
                     Sound.damageBacteria();
                     break;
             }
+        }
+    }
+
+    performSplit() {
+        // Spawn mini amoebas around this boss
+        for (let i = 0; i < this.splitCount; i++) {
+            const angle = (Math.PI * 2 / this.splitCount) * i + Math.random() * 0.5;
+            const spawnDist = this.size + 30;
+            const spawnX = this.x + Math.cos(angle) * spawnDist;
+            const spawnY = this.y + Math.sin(angle) * spawnDist;
+
+            const miniAmoeba = new Enemy('mini_amoeba', spawnX, spawnY);
+            enemies.push(miniAmoeba);
+        }
+
+        // Visual effect for split
+        for (let i = 0; i < 8; i++) {
+            effects.push({
+                type: 'particle',
+                x: this.x,
+                y: this.y,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6,
+                life: 400,
+                maxLife: 400,
+                color: this.color,
+                size: 6,
+            });
         }
     }
 
@@ -881,6 +1013,188 @@ export class Enemy {
             ctx.fillStyle = '#2d3436';
             ctx.beginPath();
             ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'amoeba_boss') {
+            // Giant Amoeba boss - blobby shape with pseudopods
+            const pulse = 1 + Math.sin(this.wobble) * 0.15;
+
+            // Outer glow
+            const glow = ctx.createRadialGradient(0, 0, this.size * 0.5, 0, 0, this.size * 1.6);
+            glow.addColorStop(0, 'rgba(0, 184, 148, 0.4)');
+            glow.addColorStop(1, 'rgba(0, 184, 148, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 1.6 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main body - irregular blobby shape with pseudopods
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            for (let i = 0; i < 20; i++) {
+                const angle = (Math.PI * 2 / 20) * i;
+                const pseudopod = (i % 4 === 0) ? 15 : 0;
+                const r = this.size * pulse + Math.sin(this.wobble * 1.5 + i * 0.6) * 8 + pseudopod;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner nucleus (irregular)
+            ctx.fillStyle = '#009688';
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i;
+                const r = this.size * 0.4 + Math.sin(this.wobble + i) * 3;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Food vacuoles (small circles)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for (let i = 0; i < 3; i++) {
+                const angle = this.wobble + (Math.PI * 2 / 3) * i;
+                const dist = this.size * 0.5;
+                ctx.beginPath();
+                ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (this.type === 'cancer_boss') {
+            // Cancer Cell boss - irregular cell with multiple nuclei
+            const pulse = 1 + Math.sin(this.wobble * 2) * 0.08;
+
+            // Danger glow
+            const glow = ctx.createRadialGradient(0, 0, this.size * 0.5, 0, 0, this.size * 1.5);
+            glow.addColorStop(0, 'rgba(214, 48, 49, 0.5)');
+            glow.addColorStop(1, 'rgba(214, 48, 49, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 1.5 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main body - very irregular shape
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                const irregularity = Math.sin(i * 2.5 + this.wobble) * 10;
+                const r = this.size * pulse + irregularity;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Multiple abnormal nuclei (cancer characteristic)
+            ctx.fillStyle = '#c0392b';
+            for (let i = 0; i < 4; i++) {
+                const angle = (Math.PI * 2 / 4) * i + this.wobble * 0.5;
+                const dist = this.size * 0.35;
+                const nucleusSize = 6 + Math.sin(this.wobble + i) * 2;
+                ctx.beginPath();
+                ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, nucleusSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Angry expression
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(-8, -5, 6, 0, Math.PI * 2);
+            ctx.arc(8, -5, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2d3436';
+            ctx.beginPath();
+            ctx.arc(-8, -5, 3, 0, Math.PI * 2);
+            ctx.arc(8, -5, 3, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'virus_boss') {
+            // Virus Host boss - large virus with spawn animation
+            const pulse = 1 + Math.sin(this.wobble) * 0.1;
+            const spawnPulse = this.isSpawning ? 1.3 : 1;
+
+            // Outer glow (more intense when spawning)
+            const glowIntensity = this.isSpawning ? 0.6 : 0.3;
+            const glow = ctx.createRadialGradient(0, 0, this.size * 0.5, 0, 0, this.size * 2);
+            glow.addColorStop(0, `rgba(108, 92, 231, ${glowIntensity})`);
+            glow.addColorStop(1, 'rgba(108, 92, 231, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 2 * pulse * spawnPulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main body
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Viral spikes (characteristic coronavirus-like)
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i + this.wobble * 0.1;
+                const spikeLength = this.size * 0.5 + Math.sin(this.wobble + i) * 5;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(angle) * this.size, Math.sin(angle) * this.size);
+                ctx.lineTo(Math.cos(angle) * (this.size + spikeLength), Math.sin(angle) * (this.size + spikeLength));
+                ctx.stroke();
+
+                // Spike tips
+                ctx.fillStyle = '#a29bfe';
+                ctx.beginPath();
+                ctx.arc(
+                    Math.cos(angle) * (this.size + spikeLength),
+                    Math.sin(angle) * (this.size + spikeLength),
+                    5, 0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+
+            // Inner core with viral particles (showing spawn readiness)
+            ctx.fillStyle = '#5f27cd';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mini virus particles inside (show spawn progress)
+            const particleCount = this.isSpawning ? 6 : 3;
+            ctx.fillStyle = '#e74c3c';
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 / particleCount) * i + this.wobble * 2;
+                const dist = this.size * 0.3;
+                ctx.beginPath();
+                ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (this.type === 'mini_amoeba') {
+            // Mini amoeba spawned by amoeba boss
+            const pulse = 1 + Math.sin(this.wobble * 2) * 0.1;
+
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            for (let i = 0; i < 10; i++) {
+                const angle = (Math.PI * 2 / 10) * i;
+                const r = this.size * pulse + Math.sin(this.wobble + i * 0.8) * 3;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Small nucleus
+            ctx.fillStyle = '#009688';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 0.3, 0, Math.PI * 2);
             ctx.fill();
         }
 

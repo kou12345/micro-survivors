@@ -241,6 +241,53 @@ export const ENEMY_TYPES = {
         isBoss: true,
         science: '薬剤耐性菌は抗生物質が効かない細菌。遺伝子変異や耐性遺伝子の獲得により、治療が困難な感染症を引き起こす。',
     },
+    amoeba_boss: {
+        name: '巨大アメーバ',
+        color: '#00b894',
+        size: 50,
+        hp: 800,
+        speed: 0.6,
+        damage: 40,
+        xp: 180,
+        isBoss: true,
+        // Splitting boss - spawns smaller copies when damaged
+        bossPattern: 'split',
+        splitThresholds: [0.75, 0.5, 0.25], // HP % thresholds to split
+        splitCount: 2, // Number of mini-amoebas per split
+        science: 'アメーバは単細胞の原生生物。偽足を使って移動・捕食し、二分裂で無性生殖する。環境悪化時にはシストを形成して休眠する。',
+    },
+    cancer_boss: {
+        name: '癌細胞',
+        color: '#d63031',
+        size: 45,
+        hp: 500,
+        speed: 0.8,
+        damage: 30,
+        xp: 200,
+        isBoss: true,
+        // Ranged attack boss - fires projectiles
+        bossPattern: 'ranged',
+        attackCooldown: 1500,
+        projectileSpeed: 4,
+        projectileDamage: 15,
+        projectileCount: 5, // Fires in spread pattern
+        science: '癌細胞は制御不能な増殖を起こす異常細胞。アポトーシス（細胞死）を回避し、血管新生を誘導して栄養を得る。転移により全身に広がる。',
+    },
+    virus_boss: {
+        name: 'ウイルス母体',
+        color: '#6c5ce7',
+        size: 55,
+        hp: 700,
+        speed: 0.5,
+        damage: 50,
+        xp: 220,
+        isBoss: true,
+        // Spawner boss - periodically spawns mini viruses
+        bossPattern: 'spawner',
+        spawnCooldown: 3000,
+        spawnCount: 4, // Viruses per spawn
+        science: 'ウイルスは宿主細胞に侵入し、細胞の機構を乗っ取って大量の子ウイルスを産生する。放出されたウイルスは次の細胞へと感染を広げる。',
+    },
     spore: {
         name: '胞子',
         color: '#f39c12',
@@ -258,5 +305,15 @@ export const ENEMY_TYPES = {
         projectileDamage: 10,
         projectileSize: 6,
         projectileColor: '#e67e22',
+    },
+    mini_amoeba: {
+        name: 'ミニアメーバ',
+        color: '#55efc4',
+        size: 18,
+        hp: 60,
+        speed: 1.2,
+        damage: 15,
+        xp: 15,
+        science: 'アメーバが分裂して生まれた小型の個体。親より素早く動き回る。',
     },
 };
