@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro Survivors</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            border-radius: 50%;
+            box-shadow:
+                0 0 0 8px #2d3748,
+                0 0 0 12px #4a5568,
+                0 0 30px rgba(0, 255, 200, 0.3);
+        }
+
+        #gameCanvas {
+            display: block;
+            border-radius: 50%;
+            cursor: none;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            pointer-events: none;
+        }
+
+        .ui-bar {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        #hpBar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #666;
+        }
+
+        #hpFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a5a);
+            transition: width 0.2s;
+        }
+
+        #xpBar {
+            width: 200px;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid #666;
+            margin-top: 4px;
+        }
+
+        #xpFill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            transition: width 0.2s;
+        }
+
+        #timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #levelUpMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            border: 3px solid #4ecdc4;
+            box-shadow: 0 0 30px rgba(78, 205, 196, 0.5);
+        }
+
+        #levelUpMenu h2 {
+            color: #4ecdc4;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .upgrade-btn {
+            width: 250px;
+            padding: 15px;
+            margin: 8px;
+            background: linear-gradient(135deg, #2d3748, #1a202c);
+            border: 2px solid #4a5568;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            pointer-events: auto;
+        }
+
+        .upgrade-btn:hover {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            border-color: #4ecdc4;
+            transform: scale(1.05);
+        }
+
+        .upgrade-btn .name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .upgrade-btn .desc {
+            font-size: 12px;
+            color: #a0aec0;
+            margin-top: 5px;
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #startScreen h1 {
+            font-size: 36px;
+            color: #4ecdc4;
+            text-shadow: 0 0 20px rgba(78, 205, 196, 0.8);
+            margin-bottom: 20px;
+        }
+
+        #startScreen p {
+            color: #a0aec0;
+            margin-bottom: 30px;
+        }
+
+        #gameOverScreen h2 {
+            font-size: 32px;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        #gameOverScreen .result {
+            color: #a0aec0;
+            margin-bottom: 20px;
+        }
+
+        .main-btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .main-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.6);
+        }
+
+        #weaponDisplay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .weapon-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            border: 2px solid #4a5568;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .weapon-level {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            background: #4ecdc4;
+            color: black;
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="800"></canvas>
+
+        <div id="ui">
+            <div class="ui-bar">
+                <div>HP</div>
+                <div id="hpBar"><div id="hpFill" style="width: 100%"></div></div>
+                <div style="margin-top: 4px;">Lv.<span id="levelDisplay">1</span></div>
+                <div id="xpBar"><div id="xpFill" style="width: 0%"></div></div>
+            </div>
+        </div>
+
+        <div id="timer">15:00</div>
+
+        <div id="weaponDisplay"></div>
+
+        <div id="levelUpMenu">
+            <h2>LEVEL UP!</h2>
+            <div id="upgradeOptions"></div>
+        </div>
+
+        <div id="startScreen">
+            <h1>MICRO SURVIVORS</h1>
+            <p>WASD or Arrow keys to move<br>Survive for 15 minutes!</p>
+            <button class="main-btn" onclick="startGame()">START</button>
+        </div>
+
+        <div id="gameOverScreen" style="display: none;">
+            <h2>GAME OVER</h2>
+            <div class="result">
+                <p>Time: <span id="finalTime">00:00</span></p>
+                <p>Level: <span id="finalLevel">1</span></p>
+                <p>Kills: <span id="finalKills">0</span></p>
+            </div>
+            <button class="main-btn" onclick="startGame()">RETRY</button>
+        </div>
+    </div>
+
+    <script>
+        // ===== GAME CONFIGURATION =====
+        const CONFIG = {
+            CANVAS_SIZE: 800,
+            WORLD_SIZE: 2000,
+            GAME_DURATION: 15 * 60 * 1000, // 15 minutes
+            PLAYER_SPEED: 3,
+            PLAYER_MAX_HP: 100,
+            XP_TO_LEVEL: level => Math.floor(10 * Math.pow(1.2, level - 1)),
+        };
+
+        // ===== GAME STATE =====
+        let canvas, ctx;
+        let gameState = 'start';
+        let gameTime = 0;
+        let lastTime = 0;
+        let keys = {};
+        let player, enemies, xpOrbs, projectiles, effects;
+        let camera = { x: 0, y: 0 };
+        let killCount = 0;
+
+        // ===== WEAPON DEFINITIONS =====
+        const WEAPONS = {
+            antibody: {
+                name: '抗体',
+                desc: 'プレイヤー周囲を回転して攻撃',
+                emoji: '🔵',
+                color: '#4ecdc4',
+                damage: 10,
+                cooldown: 100,
+                orbits: 2,
+                range: 60,
+                speed: 0.05,
+            },
+            enzyme: {
+                name: '酵素弾',
+                desc: '前方に発射する弾丸',
+                emoji: '💚',
+                color: '#7bed9f',
+                damage: 15,
+                cooldown: 800,
+                speed: 8,
+                range: 300,
+            },
+            atp: {
+                name: 'ATP爆弾',
+                desc: '設置して時間差で爆発',
+                emoji: '💥',
+                color: '#ffa502',
+                damage: 30,
+                cooldown: 2000,
+                radius: 80,
+                delay: 1500,
+            },
+            cilia: {
+                name: '繊毛ウィップ',
+                desc: '鞭状に薙ぎ払い',
+                emoji: '🌊',
+                color: '#a29bfe',
+                damage: 20,
+                cooldown: 1200,
+                range: 100,
+                arc: Math.PI * 0.8,
+            },
+        };
+
+        // ===== PASSIVE ITEMS =====
+        const PASSIVES = {
+            mitochondria: {
+                name: 'ミトコンドリア',
+                desc: '攻撃力+15%',
+                emoji: '🔋',
+                effect: (p) => p.damageMultiplier += 0.15,
+            },
+            ribosome: {
+                name: 'リボソーム',
+                desc: '経験値+20%',
+                emoji: '🧬',
+                effect: (p) => p.xpMultiplier += 0.2,
+            },
+            membrane: {
+                name: '細胞膜強化',
+                desc: '被ダメージ-15%',
+                emoji: '🛡️',
+                effect: (p) => p.defenseMultiplier += 0.15,
+            },
+            flagellum: {
+                name: '鞭毛',
+                desc: '移動速度+15%',
+                emoji: '🏃',
+                effect: (p) => p.speedMultiplier += 0.15,
+            },
+            nucleus: {
+                name: '核膜',
+                desc: 'クールダウン-10%',
+                emoji: '⚡',
+                effect: (p) => p.cooldownMultiplier -= 0.1,
+            },
+        };
+
+        // ===== ENEMY DEFINITIONS =====
+        const ENEMY_TYPES = {
+            germ: {
+                name: '雑菌',
+                color: '#2ecc71',
+                size: 12,
+                hp: 15,
+                speed: 1,
+                damage: 5,
+                xp: 3,
+            },
+            virus: {
+                name: 'ウイルス',
+                color: '#e74c3c',
+                size: 10,
+                hp: 8,
+                speed: 2.5,
+                damage: 8,
+                xp: 5,
+            },
+            bacteria: {
+                name: 'バクテリア',
+                color: '#9b59b6',
+                size: 20,
+                hp: 40,
+                speed: 0.8,
+                damage: 12,
+                xp: 10,
+                width: 30,
+                height: 12,
+            },
+        };
+
+        // ===== PLAYER CLASS =====
+        class Player {
+            constructor() {
+                this.x = CONFIG.WORLD_SIZE / 2;
+                this.y = CONFIG.WORLD_SIZE / 2;
+                this.size = 20;
+                this.hp = CONFIG.PLAYER_MAX_HP;
+                this.maxHp = CONFIG.PLAYER_MAX_HP;
+                this.level = 1;
+                this.xp = 0;
+                this.xpToNext = CONFIG.XP_TO_LEVEL(1);
+                this.weapons = { antibody: { level: 1, angle: 0, lastAttack: 0 } };
+                this.passives = {};
+                this.damageMultiplier = 1;
+                this.xpMultiplier = 1;
+                this.defenseMultiplier = 0;
+                this.speedMultiplier = 1;
+                this.cooldownMultiplier = 1;
+                this.invincible = 0;
+                this.facingAngle = 0;
+            }
+
+            update(dt) {
+                let dx = 0, dy = 0;
+                if (keys['w'] || keys['arrowup']) dy = -1;
+                if (keys['s'] || keys['arrowdown']) dy = 1;
+                if (keys['a'] || keys['arrowleft']) dx = -1;
+                if (keys['d'] || keys['arrowright']) dx = 1;
+
+                if (dx !== 0 || dy !== 0) {
+                    const len = Math.sqrt(dx * dx + dy * dy);
+                    dx /= len;
+                    dy /= len;
+                    this.facingAngle = Math.atan2(dy, dx);
+                }
+
+                const speed = CONFIG.PLAYER_SPEED * this.speedMultiplier;
+                this.x += dx * speed;
+                this.y += dy * speed;
+
+                // World bounds
+                this.x = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.x));
+                this.y = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.y));
+
+                if (this.invincible > 0) this.invincible -= dt;
+
+                // Update weapons
+                this.updateWeapons(dt);
+            }
+
+            updateWeapons(dt) {
+                const now = performance.now();
+
+                for (const [type, weapon] of Object.entries(this.weapons)) {
+                    const def = WEAPONS[type];
+                    const cooldown = def.cooldown * this.cooldownMultiplier;
+
+                    if (type === 'antibody') {
+                        weapon.angle += def.speed * (1 + weapon.level * 0.2);
+                        const orbits = def.orbits + Math.floor(weapon.level / 2);
+                        const range = def.range + weapon.level * 10;
+
+                        for (let i = 0; i < orbits; i++) {
+                            const angle = weapon.angle + (Math.PI * 2 / orbits) * i;
+                            const ox = this.x + Math.cos(angle) * range;
+                            const oy = this.y + Math.sin(angle) * range;
+
+                            // Check collision with enemies
+                            for (const enemy of enemies) {
+                                const dist = Math.hypot(enemy.x - ox, enemy.y - oy);
+                                if (dist < enemy.size + 15 && now - (enemy.lastHitBy?.[type] || 0) > 200) {
+                                    const damage = def.damage * this.damageMultiplier * (1 + weapon.level * 0.2);
+                                    enemy.takeDamage(damage);
+                                    enemy.lastHitBy = enemy.lastHitBy || {};
+                                    enemy.lastHitBy[type] = now;
+                                    createHitEffect(ox, oy, def.color);
+                                }
+                            }
+                        }
+                    } else if (type === 'enzyme' && now - weapon.lastAttack > cooldown) {
+                        weapon.lastAttack = now;
+                        const target = findNearestEnemy(this.x, this.y);
+                        const angle = target ? Math.atan2(target.y - this.y, target.x - this.x) : this.facingAngle;
+                        const count = 1 + Math.floor(weapon.level / 3);
+
+                        for (let i = 0; i < count; i++) {
+                            const spread = (i - (count - 1) / 2) * 0.15;
+                            projectiles.push({
+                                type: 'enzyme',
+                                x: this.x,
+                                y: this.y,
+                                vx: Math.cos(angle + spread) * def.speed,
+                                vy: Math.sin(angle + spread) * def.speed,
+                                damage: def.damage * this.damageMultiplier * (1 + weapon.level * 0.2),
+                                range: def.range + weapon.level * 30,
+                                traveled: 0,
+                                color: def.color,
+                                size: 6 + weapon.level,
+                            });
+                        }
+                    } else if (type === 'atp' && now - weapon.lastAttack > cooldown) {
+                        weapon.lastAttack = now;
+                        projectiles.push({
+                            type: 'atp',
+                            x: this.x,
+                            y: this.y,
+                            damage: def.damage * this.damageMultiplier * (1 + weapon.level * 0.3),
+                            radius: def.radius + weapon.level * 15,
+                            timer: def.delay,
+                            color: def.color,
+                        });
+                    } else if (type === 'cilia' && now - weapon.lastAttack > cooldown) {
+                        weapon.lastAttack = now;
+                        const target = findNearestEnemy(this.x, this.y);
+                        const baseAngle = target ? Math.atan2(target.y - this.y, target.x - this.x) : this.facingAngle;
+                        const range = def.range + weapon.level * 15;
+                        const arc = def.arc + weapon.level * 0.1;
+                        const damage = def.damage * this.damageMultiplier * (1 + weapon.level * 0.2);
+
+                        // Create whip effect
+                        effects.push({
+                            type: 'cilia',
+                            x: this.x,
+                            y: this.y,
+                            angle: baseAngle,
+                            arc: arc,
+                            range: range,
+                            duration: 200,
+                            elapsed: 0,
+                            color: def.color,
+                        });
+
+                        // Hit enemies in arc
+                        for (const enemy of enemies) {
+                            const dx = enemy.x - this.x;
+                            const dy = enemy.y - this.y;
+                            const dist = Math.hypot(dx, dy);
+                            if (dist < range + enemy.size) {
+                                const enemyAngle = Math.atan2(dy, dx);
+                                let angleDiff = enemyAngle - baseAngle;
+                                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                                if (Math.abs(angleDiff) < arc / 2) {
+                                    enemy.takeDamage(damage);
+                                    createHitEffect(enemy.x, enemy.y, def.color);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            takeDamage(amount) {
+                if (this.invincible > 0) return;
+                const damage = amount * (1 - this.defenseMultiplier);
+                this.hp -= damage;
+                this.invincible = 500;
+                createHitEffect(this.x, this.y, '#ff6b6b');
+                if (this.hp <= 0) {
+                    gameOver();
+                }
+            }
+
+            addXP(amount) {
+                this.xp += amount * this.xpMultiplier;
+                while (this.xp >= this.xpToNext) {
+                    this.xp -= this.xpToNext;
+                    this.level++;
+                    this.xpToNext = CONFIG.XP_TO_LEVEL(this.level);
+                    showLevelUpMenu();
+                }
+            }
+
+            draw() {
+                const sx = this.x - camera.x + CONFIG.CANVAS_SIZE / 2;
+                const sy = this.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+
+                // Draw player (white blood cell - amoeba-like)
+                ctx.save();
+                ctx.translate(sx, sy);
+
+                // Invincibility flash
+                if (this.invincible > 0 && Math.floor(this.invincible / 50) % 2) {
+                    ctx.globalAlpha = 0.5;
+                }
+
+                // Body
+                ctx.fillStyle = '#f8f8f8';
+                ctx.beginPath();
+                const time = performance.now() / 200;
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 / 8) * i;
+                    const wobble = Math.sin(time + i) * 3;
+                    const r = this.size + wobble;
+                    const px = Math.cos(angle) * r;
+                    const py = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Nucleus
+                ctx.fillStyle = '#a29bfe';
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = '#2d3436';
+                ctx.beginPath();
+                ctx.arc(-5, -3, 3, 0, Math.PI * 2);
+                ctx.arc(5, -3, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+
+                // Draw antibody orbits
+                if (this.weapons.antibody) {
+                    const weapon = this.weapons.antibody;
+                    const def = WEAPONS.antibody;
+                    const orbits = def.orbits + Math.floor(weapon.level / 2);
+                    const range = def.range + weapon.level * 10;
+
+                    for (let i = 0; i < orbits; i++) {
+                        const angle = weapon.angle + (Math.PI * 2 / orbits) * i;
+                        const ox = sx + Math.cos(angle) * range;
+                        const oy = sy + Math.sin(angle) * range;
+
+                        ctx.fillStyle = def.color;
+                        ctx.beginPath();
+                        ctx.arc(ox, oy, 10 + weapon.level, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#fff';
+                        ctx.beginPath();
+                        ctx.arc(ox - 3, oy - 3, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        // ===== ENEMY CLASS =====
+        class Enemy {
+            constructor(type, x, y) {
+                this.type = type;
+                const def = ENEMY_TYPES[type];
+                this.x = x;
+                this.y = y;
+                this.size = def.size;
+                this.width = def.width || def.size * 2;
+                this.height = def.height || def.size * 2;
+                this.hp = def.hp;
+                this.maxHp = def.hp;
+                this.speed = def.speed;
+                this.damage = def.damage;
+                this.xp = def.xp;
+                this.color = def.color;
+                this.lastHitBy = {};
+                this.wobble = Math.random() * Math.PI * 2;
+            }
+
+            update(dt) {
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 0) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+
+                this.wobble += 0.1;
+
+                // Check collision with player
+                if (dist < this.size + player.size) {
+                    player.takeDamage(this.damage);
+                }
+            }
+
+            takeDamage(amount) {
+                this.hp -= amount;
+                if (this.hp <= 0) {
+                    this.die();
+                }
+            }
+
+            die() {
+                const idx = enemies.indexOf(this);
+                if (idx !== -1) enemies.splice(idx, 1);
+                killCount++;
+
+                // Drop XP
+                xpOrbs.push({
+                    x: this.x,
+                    y: this.y,
+                    value: this.xp,
+                    size: 5 + Math.min(this.xp, 10),
+                });
+
+                // Death effect
+                for (let i = 0; i < 5; i++) {
+                    effects.push({
+                        type: 'particle',
+                        x: this.x,
+                        y: this.y,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        life: 300,
+                        maxLife: 300,
+                        color: this.color,
+                        size: 4,
+                    });
+                }
+            }
+
+            draw() {
+                const sx = this.x - camera.x + CONFIG.CANVAS_SIZE / 2;
+                const sy = this.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+
+                ctx.save();
+                ctx.translate(sx, sy);
+
+                if (this.type === 'germ') {
+                    // Green bumpy circle
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    for (let i = 0; i < 12; i++) {
+                        const angle = (Math.PI * 2 / 12) * i;
+                        const r = this.size + Math.sin(this.wobble + i * 0.5) * 3;
+                        const px = Math.cos(angle) * r;
+                        const py = Math.sin(angle) * r;
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.type === 'virus') {
+                    // Red spiky circle
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Spikes
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (Math.PI * 2 / 8) * i + this.wobble * 0.1;
+                        ctx.beginPath();
+                        ctx.moveTo(Math.cos(angle) * this.size, Math.sin(angle) * this.size);
+                        ctx.lineTo(Math.cos(angle) * (this.size + 6), Math.sin(angle) * (this.size + 6));
+                        ctx.stroke();
+                    }
+                } else if (this.type === 'bacteria') {
+                    // Rod-shaped
+                    ctx.fillStyle = this.color;
+                    ctx.rotate(Math.atan2(player.y - this.y, player.x - this.x));
+                    ctx.beginPath();
+                    ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, this.height / 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+
+                // HP bar for tough enemies
+                if (this.maxHp > 20 && this.hp < this.maxHp) {
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(sx - 15, sy - this.size - 10, 30, 4);
+                    ctx.fillStyle = '#e74c3c';
+                    ctx.fillRect(sx - 15, sy - this.size - 10, 30 * (this.hp / this.maxHp), 4);
+                }
+            }
+        }
+
+        // ===== HELPER FUNCTIONS =====
+        function findNearestEnemy(x, y) {
+            let nearest = null;
+            let nearestDist = Infinity;
+            for (const enemy of enemies) {
+                const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearest = enemy;
+                }
+            }
+            return nearest;
+        }
+
+        function createHitEffect(x, y, color) {
+            for (let i = 0; i < 3; i++) {
+                effects.push({
+                    type: 'particle',
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    life: 200,
+                    maxLife: 200,
+                    color: color,
+                    size: 3,
+                });
+            }
+        }
+
+        function spawnEnemy() {
+            const progress = gameTime / CONFIG.GAME_DURATION;
+            const types = ['germ'];
+            if (progress > 0.1) types.push('virus');
+            if (progress > 0.3) types.push('bacteria');
+
+            const type = types[Math.floor(Math.random() * types.length)];
+
+            // Spawn at edge of screen
+            const angle = Math.random() * Math.PI * 2;
+            const dist = CONFIG.CANVAS_SIZE / 2 + 100;
+            const x = player.x + Math.cos(angle) * dist;
+            const y = player.y + Math.sin(angle) * dist;
+
+            if (x > 0 && x < CONFIG.WORLD_SIZE && y > 0 && y < CONFIG.WORLD_SIZE) {
+                const enemy = new Enemy(type, x, y);
+                // Scale HP with time
+                enemy.hp *= 1 + progress * 2;
+                enemy.maxHp = enemy.hp;
+                enemies.push(enemy);
+            }
+        }
+
+        // ===== LEVEL UP SYSTEM =====
+        function showLevelUpMenu() {
+            gameState = 'levelup';
+            const menu = document.getElementById('levelUpMenu');
+            const options = document.getElementById('upgradeOptions');
+            options.innerHTML = '';
+
+            const choices = generateUpgradeChoices();
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'upgrade-btn';
+                btn.innerHTML = `
+                    <div class="name">${choice.emoji} ${choice.name} ${choice.levelText || ''}</div>
+                    <div class="desc">${choice.desc}</div>
+                `;
+                btn.onclick = () => selectUpgrade(choice);
+                options.appendChild(btn);
+            });
+
+            menu.style.display = 'flex';
+        }
+
+        function generateUpgradeChoices() {
+            const choices = [];
+            const allOptions = [];
+
+            // Weapons player doesn't have
+            for (const [type, def] of Object.entries(WEAPONS)) {
+                if (!player.weapons[type]) {
+                    allOptions.push({
+                        type: 'weapon',
+                        key: type,
+                        name: def.name,
+                        desc: def.desc,
+                        emoji: def.emoji,
+                        levelText: 'NEW!',
+                    });
+                } else if (player.weapons[type].level < 8) {
+                    allOptions.push({
+                        type: 'weapon',
+                        key: type,
+                        name: def.name,
+                        desc: `レベル ${player.weapons[type].level + 1} に強化`,
+                        emoji: def.emoji,
+                        levelText: `Lv.${player.weapons[type].level} → ${player.weapons[type].level + 1}`,
+                    });
+                }
+            }
+
+            // Passives
+            for (const [type, def] of Object.entries(PASSIVES)) {
+                const count = player.passives[type] || 0;
+                if (count < 5) {
+                    allOptions.push({
+                        type: 'passive',
+                        key: type,
+                        name: def.name,
+                        desc: def.desc,
+                        emoji: def.emoji,
+                        levelText: count > 0 ? `x${count + 1}` : '',
+                    });
+                }
+            }
+
+            // Pick 3 random
+            while (choices.length < 3 && allOptions.length > 0) {
+                const idx = Math.floor(Math.random() * allOptions.length);
+                choices.push(allOptions.splice(idx, 1)[0]);
+            }
+
+            return choices;
+        }
+
+        function selectUpgrade(choice) {
+            if (choice.type === 'weapon') {
+                if (player.weapons[choice.key]) {
+                    player.weapons[choice.key].level++;
+                } else {
+                    player.weapons[choice.key] = { level: 1, lastAttack: 0, angle: 0 };
+                }
+            } else if (choice.type === 'passive') {
+                player.passives[choice.key] = (player.passives[choice.key] || 0) + 1;
+                PASSIVES[choice.key].effect(player);
+            }
+
+            updateWeaponDisplay();
+            document.getElementById('levelUpMenu').style.display = 'none';
+            gameState = 'playing';
+        }
+
+        function updateWeaponDisplay() {
+            const display = document.getElementById('weaponDisplay');
+            display.innerHTML = '';
+            for (const [type, weapon] of Object.entries(player.weapons)) {
+                const def = WEAPONS[type];
+                const div = document.createElement('div');
+                div.className = 'weapon-icon';
+                div.style.position = 'relative';
+                div.innerHTML = `${def.emoji}<span class="weapon-level">${weapon.level}</span>`;
+                display.appendChild(div);
+            }
+        }
+
+        // ===== GAME LOOP =====
+        function update(dt) {
+            if (gameState !== 'playing') return;
+
+            gameTime += dt;
+
+            // Check win condition
+            if (gameTime >= CONFIG.GAME_DURATION) {
+                gameWin();
+                return;
+            }
+
+            player.update(dt);
+
+            // Update camera
+            camera.x = player.x;
+            camera.y = player.y;
+
+            // Update enemies
+            for (const enemy of [...enemies]) {
+                enemy.update(dt);
+            }
+
+            // Update projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                if (p.type === 'enzyme') {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.traveled += Math.hypot(p.vx, p.vy);
+
+                    // Check collision
+                    for (const enemy of enemies) {
+                        const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+                        if (dist < enemy.size + p.size) {
+                            enemy.takeDamage(p.damage);
+                            createHitEffect(p.x, p.y, p.color);
+                            projectiles.splice(i, 1);
+                            break;
+                        }
+                    }
+
+                    if (p.traveled > p.range) {
+                        projectiles.splice(i, 1);
+                    }
+                } else if (p.type === 'atp') {
+                    p.timer -= dt;
+                    if (p.timer <= 0) {
+                        // Explode
+                        for (const enemy of enemies) {
+                            const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+                            if (dist < p.radius + enemy.size) {
+                                enemy.takeDamage(p.damage);
+                            }
+                        }
+
+                        // Explosion effect
+                        for (let j = 0; j < 12; j++) {
+                            const angle = (Math.PI * 2 / 12) * j;
+                            effects.push({
+                                type: 'particle',
+                                x: p.x,
+                                y: p.y,
+                                vx: Math.cos(angle) * 5,
+                                vy: Math.sin(angle) * 5,
+                                life: 400,
+                                maxLife: 400,
+                                color: p.color,
+                                size: 8,
+                            });
+                        }
+
+                        projectiles.splice(i, 1);
+                    }
+                }
+            }
+
+            // Update XP orbs
+            for (let i = xpOrbs.length - 1; i >= 0; i--) {
+                const orb = xpOrbs[i];
+                const dist = Math.hypot(orb.x - player.x, orb.y - player.y);
+                const collectRange = 100 + player.level * 5;
+
+                if (dist < collectRange) {
+                    const speed = Math.max(5, 15 - dist / 20);
+                    const dx = player.x - orb.x;
+                    const dy = player.y - orb.y;
+                    orb.x += (dx / dist) * speed;
+                    orb.y += (dy / dist) * speed;
+                }
+
+                if (dist < player.size) {
+                    player.addXP(orb.value);
+                    xpOrbs.splice(i, 1);
+                }
+            }
+
+            // Update effects
+            for (let i = effects.length - 1; i >= 0; i--) {
+                const e = effects[i];
+                if (e.type === 'particle') {
+                    e.x += e.vx;
+                    e.y += e.vy;
+                    e.life -= dt;
+                    if (e.life <= 0) effects.splice(i, 1);
+                } else if (e.type === 'cilia') {
+                    e.elapsed += dt;
+                    if (e.elapsed >= e.duration) effects.splice(i, 1);
+                }
+            }
+
+            // Spawn enemies
+            const spawnRate = 1000 - Math.min(gameTime / 1000, 800);
+            if (Math.random() < dt / spawnRate) {
+                spawnEnemy();
+            }
+        }
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = '#0a192f';
+            ctx.fillRect(0, 0, CONFIG.CANVAS_SIZE, CONFIG.CANVAS_SIZE);
+
+            // Draw petri dish background
+            const gradient = ctx.createRadialGradient(
+                CONFIG.CANVAS_SIZE / 2, CONFIG.CANVAS_SIZE / 2, 0,
+                CONFIG.CANVAS_SIZE / 2, CONFIG.CANVAS_SIZE / 2, CONFIG.CANVAS_SIZE / 2
+            );
+            gradient.addColorStop(0, 'rgba(78, 205, 196, 0.1)');
+            gradient.addColorStop(0.7, 'rgba(78, 205, 196, 0.05)');
+            gradient.addColorStop(1, 'rgba(78, 205, 196, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, CONFIG.CANVAS_SIZE, CONFIG.CANVAS_SIZE);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(78, 205, 196, 0.1)';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            const offsetX = (camera.x % gridSize);
+            const offsetY = (camera.y % gridSize);
+            for (let x = -offsetX; x < CONFIG.CANVAS_SIZE; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, CONFIG.CANVAS_SIZE);
+                ctx.stroke();
+            }
+            for (let y = -offsetY; y < CONFIG.CANVAS_SIZE; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(CONFIG.CANVAS_SIZE, y);
+                ctx.stroke();
+            }
+
+            // Floating bubbles (background decoration)
+            const time = performance.now() / 2000;
+            ctx.fillStyle = 'rgba(78, 205, 196, 0.1)';
+            for (let i = 0; i < 20; i++) {
+                const bx = ((i * 137 + time * 20) % CONFIG.CANVAS_SIZE);
+                const by = ((i * 97 + Math.sin(time + i) * 30) % CONFIG.CANVAS_SIZE);
+                const br = 10 + (i % 5) * 5;
+                ctx.beginPath();
+                ctx.arc(bx, by, br, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw XP orbs
+            for (const orb of xpOrbs) {
+                const sx = orb.x - camera.x + CONFIG.CANVAS_SIZE / 2;
+                const sy = orb.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+
+                const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, orb.size * 2);
+                glow.addColorStop(0, 'rgba(78, 205, 196, 0.8)');
+                glow.addColorStop(1, 'rgba(78, 205, 196, 0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(sx, sy, orb.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#4ecdc4';
+                ctx.beginPath();
+                ctx.arc(sx, sy, orb.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw projectiles
+            for (const p of projectiles) {
+                const sx = p.x - camera.x + CONFIG.CANVAS_SIZE / 2;
+                const sy = p.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+
+                if (p.type === 'enzyme') {
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.type === 'atp') {
+                    const pulse = 1 + Math.sin(performance.now() / 100) * 0.2;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 15 * pulse, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Warning circle
+                    ctx.strokeStyle = `rgba(255, 165, 2, ${0.3 + (1 - p.timer / 1500) * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, p.radius * (1 - p.timer / 1500), 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw enemies
+            for (const enemy of enemies) {
+                enemy.draw();
+            }
+
+            // Draw effects
+            for (const e of effects) {
+                if (e.type === 'particle') {
+                    const sx = e.x - camera.x + CONFIG.CANVAS_SIZE / 2;
+                    const sy = e.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+                    const alpha = e.life / e.maxLife;
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = e.color;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, e.size * alpha, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                } else if (e.type === 'cilia') {
+                    const sx = e.x - camera.x + CONFIG.CANVAS_SIZE / 2;
+                    const sy = e.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+                    const progress = e.elapsed / e.duration;
+                    const alpha = 1 - progress;
+
+                    ctx.save();
+                    ctx.translate(sx, sy);
+                    ctx.rotate(e.angle);
+                    ctx.globalAlpha = alpha * 0.5;
+                    ctx.fillStyle = e.color;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.arc(0, 0, e.range, -e.arc / 2, e.arc / 2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                    ctx.restore();
+                }
+            }
+
+            // Draw player
+            if (gameState !== 'start') {
+                player.draw();
+            }
+
+            // Update UI
+            document.getElementById('hpFill').style.width = `${(player.hp / player.maxHp) * 100}%`;
+            document.getElementById('xpFill').style.width = `${(player.xp / player.xpToNext) * 100}%`;
+            document.getElementById('levelDisplay').textContent = player.level;
+
+            const remaining = Math.max(0, CONFIG.GAME_DURATION - gameTime);
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+            document.getElementById('timer').textContent =
+                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function gameLoop(timestamp) {
+            const dt = Math.min(timestamp - lastTime, 50);
+            lastTime = timestamp;
+
+            update(dt);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ===== GAME STATE FUNCTIONS =====
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('levelUpMenu').style.display = 'none';
+
+            gameState = 'playing';
+            gameTime = 0;
+            killCount = 0;
+            enemies = [];
+            xpOrbs = [];
+            projectiles = [];
+            effects = [];
+            player = new Player();
+            updateWeaponDisplay();
+        }
+
+        function gameOver() {
+            gameState = 'gameover';
+            document.getElementById('finalTime').textContent = document.getElementById('timer').textContent;
+            document.getElementById('finalLevel').textContent = player.level;
+            document.getElementById('finalKills').textContent = killCount;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+
+        function gameWin() {
+            gameState = 'gameover';
+            const screen = document.getElementById('gameOverScreen');
+            screen.querySelector('h2').textContent = 'VICTORY!';
+            screen.querySelector('h2').style.color = '#4ecdc4';
+            document.getElementById('finalTime').textContent = '15:00';
+            document.getElementById('finalLevel').textContent = player.level;
+            document.getElementById('finalKills').textContent = killCount;
+            screen.style.display = 'flex';
+        }
+
+        // ===== INITIALIZATION =====
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+
+            // Input handling
+            window.addEventListener('keydown', e => {
+                keys[e.key.toLowerCase()] = true;
+            });
+            window.addEventListener('keyup', e => {
+                keys[e.key.toLowerCase()] = false;
+            });
+
+            // Initialize empty player for title screen
+            player = new Player();
+            enemies = [];
+            xpOrbs = [];
+            projectiles = [];
+            effects = [];
+
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
