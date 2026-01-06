@@ -442,6 +442,12 @@ function startGame() {
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('levelUpMenu').style.display = 'none';
 
+    // Show joystick on mobile
+    const joystickContainer = document.getElementById('joystickContainer');
+    if (joystickContainer) {
+        joystickContainer.classList.add('active');
+    }
+
     // Initialize and start sound
     if (!Sound.ctx) Sound.init();
     Sound.resume();
@@ -467,6 +473,13 @@ function gameOver() {
     setGameState('gameover');
     Sound.stopBGM();
     Sound.playerDamage();
+
+    // Hide joystick
+    const joystickContainer = document.getElementById('joystickContainer');
+    if (joystickContainer) {
+        joystickContainer.classList.remove('active');
+    }
+
     document.getElementById('finalTime').textContent = document.getElementById('timer').textContent;
     document.getElementById('finalLevel').textContent = _player.level;
     document.getElementById('finalKills').textContent = killCount;
@@ -477,6 +490,13 @@ function gameWin() {
     setGameState('gameover');
     Sound.stopBGM();
     Sound.levelUp();
+
+    // Hide joystick
+    const joystickContainer = document.getElementById('joystickContainer');
+    if (joystickContainer) {
+        joystickContainer.classList.remove('active');
+    }
+
     const screen = document.getElementById('gameOverScreen');
     screen.querySelector('h2').textContent = 'VICTORY!';
     screen.querySelector('h2').style.color = '#4ecdc4';
