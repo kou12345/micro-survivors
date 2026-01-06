@@ -15,17 +15,18 @@ body {
 }
 
 #gameContainer {
-    position: relative;
-    border-radius: 50%;
-    box-shadow:
-        0 0 0 8px #2d3748,
-        0 0 0 12px #4a5568,
-        0 0 30px rgba(0, 255, 200, 0.3);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
 }
 
 #gameCanvas {
     display: block;
-    border-radius: 50%;
+    width: 100%;
+    height: 100%;
     cursor: none;
 }
 
@@ -258,10 +259,9 @@ body {
 /* Virtual Joystick for Mobile */
 #joystickContainer {
     display: none;
-    position: absolute;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
     width: 120px;
     height: 120px;
     pointer-events: auto;
@@ -300,15 +300,9 @@ body {
 
 /* Responsive Design - Tablets */
 @media (max-width: 850px) {
-    #gameContainer {
-        transform-origin: center center;
-    }
-
     #gameCanvas {
-        width: 100vmin !important;
-        height: 100vmin !important;
-        max-width: 800px;
-        max-height: 800px;
+        width: 100vw !important;
+        height: 100vh !important;
     }
 }
 
@@ -320,17 +314,9 @@ body {
         touch-action: none;
     }
 
-    #gameContainer {
-        border-radius: 0;
-        box-shadow: none;
-    }
-
     #gameCanvas {
         width: 100vw !important;
-        height: 100vw !important;
-        max-width: 100vw;
-        max-height: 100vw;
-        border-radius: 0;
+        height: 100vh !important;
     }
 
     #ui {
@@ -362,8 +348,8 @@ body {
     }
 
     #weaponDisplay {
-        bottom: 200px;
-        left: 10px;
+        bottom: 160px;
+        left: 30px;
     }
 
     .weapon-icon {
@@ -450,7 +436,8 @@ body {
     #joystickContainer {
         width: 100px;
         height: 100px;
-        bottom: 60px;
+        bottom: 20px;
+        left: 20px;
     }
 
     #joystickBase {
@@ -464,6 +451,7 @@ body {
     }
 
     #weaponDisplay {
-        bottom: 170px;
+        bottom: 130px;
+        left: 20px;
     }
 }

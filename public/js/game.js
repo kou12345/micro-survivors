@@ -1,4 +1,4 @@
-import { CONFIG, setGameTime } from './config.js';
+import { CONFIG, setGameTime, updateCanvasSize } from './config.js';
 import { Sound } from './sound.js';
 import { WEAPONS, PASSIVES } from './weapons.js';
 import { Player, Enemy, setLevelUpCallback, setGameOverCallback, setKillCountCallback } from './entities.js';
@@ -41,7 +41,7 @@ function spawnEnemy() {
 
     // Spawn at edge of screen
     const angle = Math.random() * Math.PI * 2;
-    const dist = CONFIG.CANVAS_SIZE / 2 + 100;
+    const dist = Math.max(CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT) / 2 + 100;
     const x = _player.x + Math.cos(angle) * dist;
     const y = _player.y + Math.sin(angle) * dist;
 
@@ -282,18 +282,21 @@ function update(dt) {
 function draw() {
     // Clear
     ctx.fillStyle = '#0a192f';
-    ctx.fillRect(0, 0, CONFIG.CANVAS_SIZE, CONFIG.CANVAS_SIZE);
+    ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
     // Draw petri dish background
+    const centerX = CONFIG.CANVAS_WIDTH / 2;
+    const centerY = CONFIG.CANVAS_HEIGHT / 2;
+    const maxRadius = Math.max(CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT) / 2;
     const gradient = ctx.createRadialGradient(
-        CONFIG.CANVAS_SIZE / 2, CONFIG.CANVAS_SIZE / 2, 0,
-        CONFIG.CANVAS_SIZE / 2, CONFIG.CANVAS_SIZE / 2, CONFIG.CANVAS_SIZE / 2
+        centerX, centerY, 0,
+        centerX, centerY, maxRadius
     );
     gradient.addColorStop(0, 'rgba(78, 205, 196, 0.1)');
     gradient.addColorStop(0.7, 'rgba(78, 205, 196, 0.05)');
     gradient.addColorStop(1, 'rgba(78, 205, 196, 0)');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, CONFIG.CANVAS_SIZE, CONFIG.CANVAS_SIZE);
+    ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
     // Grid
     ctx.strokeStyle = 'rgba(78, 205, 196, 0.1)';
@@ -301,16 +304,16 @@ function draw() {
     const gridSize = 50;
     const offsetX = (camera.x % gridSize);
     const offsetY = (camera.y % gridSize);
-    for (let x = -offsetX; x < CONFIG.CANVAS_SIZE; x += gridSize) {
+    for (let x = -offsetX; x < CONFIG.CANVAS_WIDTH; x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, CONFIG.CANVAS_SIZE);
+        ctx.lineTo(x, CONFIG.CANVAS_HEIGHT);
         ctx.stroke();
     }
-    for (let y = -offsetY; y < CONFIG.CANVAS_SIZE; y += gridSize) {
+    for (let y = -offsetY; y < CONFIG.CANVAS_HEIGHT; y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(CONFIG.CANVAS_SIZE, y);
+        ctx.lineTo(CONFIG.CANVAS_WIDTH, y);
         ctx.stroke();
     }
 
@@ -318,8 +321,8 @@ function draw() {
     const time = performance.now() / 2000;
     ctx.fillStyle = 'rgba(78, 205, 196, 0.1)';
     for (let i = 0; i < 20; i++) {
-        const bx = ((i * 137 + time * 20) % CONFIG.CANVAS_SIZE);
-        const by = ((i * 97 + Math.sin(time + i) * 30) % CONFIG.CANVAS_SIZE);
+        const bx = ((i * 137 + time * 20) % CONFIG.CANVAS_WIDTH);
+        const by = ((i * 97 + Math.sin(time + i) * 30) % CONFIG.CANVAS_HEIGHT);
         const br = 10 + (i % 5) * 5;
         ctx.beginPath();
         ctx.arc(bx, by, br, 0, Math.PI * 2);
@@ -328,8 +331,8 @@ function draw() {
 
     // Draw XP orbs
     for (const orb of xpOrbs) {
-        const sx = orb.x - camera.x + CONFIG.CANVAS_SIZE / 2;
-        const sy = orb.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+        const sx = orb.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+        const sy = orb.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
 
         const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, orb.size * 2);
         glow.addColorStop(0, 'rgba(78, 205, 196, 0.8)');
@@ -347,8 +350,8 @@ function draw() {
 
     // Draw projectiles
     for (const p of projectiles) {
-        const sx = p.x - camera.x + CONFIG.CANVAS_SIZE / 2;
-        const sy = p.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+        const sx = p.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+        const sy = p.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
 
         if (p.type === 'enzyme') {
             ctx.fillStyle = p.color;
@@ -379,8 +382,8 @@ function draw() {
     // Draw effects
     for (const e of effects) {
         if (e.type === 'particle') {
-            const sx = e.x - camera.x + CONFIG.CANVAS_SIZE / 2;
-            const sy = e.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
             const alpha = e.life / e.maxLife;
             ctx.globalAlpha = alpha;
             ctx.fillStyle = e.color;
@@ -389,8 +392,8 @@ function draw() {
             ctx.fill();
             ctx.globalAlpha = 1;
         } else if (e.type === 'cilia') {
-            const sx = e.x - camera.x + CONFIG.CANVAS_SIZE / 2;
-            const sy = e.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
             const progress = e.elapsed / e.duration;
             const alpha = 1 - progress;
 
@@ -608,10 +611,21 @@ function isMobile() {
            (window.innerWidth <= 600);
 }
 
+// Resize canvas to fill screen
+function resizeCanvas() {
+    updateCanvasSize();
+    canvas.width = CONFIG.CANVAS_WIDTH;
+    canvas.height = CONFIG.CANVAS_HEIGHT;
+}
+
 // Initialization
 export function init() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
+
+    // Set initial canvas size and handle resize
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     // Set callbacks for entities
     setLevelUpCallback(showLevelUpMenu);
