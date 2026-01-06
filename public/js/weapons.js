@@ -113,7 +113,7 @@ export const ENEMY_TYPES = {
         color: '#e056fd',
         size: 40,
         hp: 600,
-        speed: 1.5,
+        speed: 1,
         damage: 60,
         xp: 150,
         isBoss: true,
