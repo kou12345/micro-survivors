@@ -24,6 +24,7 @@ export const Sound = {
         }
     },
 
+    // Call this on any user interaction to unlock audio on mobile
     unlock() {
         if (!this.ctx) {
             this.init();
@@ -31,6 +32,7 @@ export const Sound = {
         this.resume();
     },
 
+    // Simple synth sound generator
     playTone(freq, duration, type = 'square', gainNode = this.sfxGain, fadeOut = true) {
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
@@ -47,6 +49,7 @@ export const Sound = {
         osc.stop(this.ctx.currentTime + duration);
     },
 
+    // Sound effects
     hit() {
         if (!this.ctx) return;
         this.playTone(400, 0.05, 'square');
@@ -73,7 +76,7 @@ export const Sound = {
 
     levelUp() {
         if (!this.ctx) return;
-        const notes = [523, 659, 784, 1047];
+        const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
         notes.forEach((freq, i) => {
             setTimeout(() => this.playTone(freq, 0.15, 'square'), i * 80);
         });
@@ -81,6 +84,7 @@ export const Sound = {
 
     explosion() {
         if (!this.ctx) return;
+        // White noise burst
         const bufferSize = this.ctx.sampleRate * 0.3;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -108,6 +112,7 @@ export const Sound = {
         this.playTone(700, 0.05, 'sine');
     },
 
+    // BGM - Simple procedural music
     startBGM() {
         if (!this.ctx || this.bgmPlaying) return;
         this.bgmPlaying = true;
@@ -121,8 +126,9 @@ export const Sound = {
     playBGMLoop() {
         if (!this.bgmPlaying || !this.ctx) return;
 
-        const bassNotes = [130.81, 146.83, 164.81, 146.83];
-        const tempo = 400;
+        // Simple bass line
+        const bassNotes = [130.81, 146.83, 164.81, 146.83]; // C3, D3, E3, D3
+        const tempo = 400; // ms per beat
 
         bassNotes.forEach((freq, i) => {
             setTimeout(() => {
@@ -140,6 +146,7 @@ export const Sound = {
             }, i * tempo);
         });
 
+        // Simple arpeggio
         const arpNotes = [261.63, 329.63, 392.00, 329.63, 261.63, 329.63, 392.00, 523.25];
         arpNotes.forEach((freq, i) => {
             setTimeout(() => {
@@ -157,6 +164,7 @@ export const Sound = {
             }, i * (tempo / 2));
         });
 
+        // Loop
         setTimeout(() => this.playBGMLoop(), bassNotes.length * tempo);
     }
 };
