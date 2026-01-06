@@ -146,10 +146,15 @@ function spawnWave(waveNumber) {
 
     const boss = new Enemy(bossType, bossX, bossY);
     // Scale boss with wave number
+    const damageScale = 1 + waveNumber * 0.2;
     boss.hp *= 1 + waveNumber * 0.5;
     boss.maxHp = boss.hp;
-    boss.damage *= 1 + waveNumber * 0.2;
+    boss.damage *= damageScale;
     boss.xp *= 1 + waveNumber * 0.3;
+    // Scale boss-specific damage (ranged attacks)
+    if (boss.bossProjectileDamage > 0) {
+        boss.bossProjectileDamage *= damageScale;
+    }
     // Apply mutation resistances
     applyMutationResistances(boss);
     enemies.push(boss);
