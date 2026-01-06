@@ -361,7 +361,8 @@ function update(dt) {
                 }
             }
 
-            if (p.traveled > p.range) {
+            // Only check range if projectile still exists
+            if (projectiles[i] === p && p.traveled > p.range) {
                 projectiles.splice(i, 1);
             }
         }
