@@ -4,8 +4,10 @@ export const Sound = {
     bgmGain: null,
     sfxGain: null,
     bgmPlaying: false,
+    initialized: false,
 
     init() {
+        if (this.initialized) return;
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         this.bgmGain = this.ctx.createGain();
         this.bgmGain.gain.value = 0.3;
@@ -13,12 +15,21 @@ export const Sound = {
         this.sfxGain = this.ctx.createGain();
         this.sfxGain.gain.value = 0.5;
         this.sfxGain.connect(this.ctx.destination);
+        this.initialized = true;
     },
 
     resume() {
         if (this.ctx && this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
+    },
+
+    // Call this on any user interaction to unlock audio on mobile
+    unlock() {
+        if (!this.ctx) {
+            this.init();
+        }
+        this.resume();
     },
 
     // Simple synth sound generator

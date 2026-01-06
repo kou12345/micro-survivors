@@ -618,6 +618,19 @@ function resizeCanvas() {
     canvas.height = CONFIG.CANVAS_HEIGHT;
 }
 
+// Unlock audio on user interaction (required for mobile browsers)
+function setupAudioUnlock() {
+    const unlockAudio = () => {
+        Sound.unlock();
+    };
+
+    // Add listeners for various user interactions
+    document.addEventListener('touchstart', unlockAudio, { once: false, passive: true });
+    document.addEventListener('touchend', unlockAudio, { once: false, passive: true });
+    document.addEventListener('click', unlockAudio, { once: false, passive: true });
+    document.addEventListener('keydown', unlockAudio, { once: false, passive: true });
+}
+
 // Initialization
 export function init() {
     canvas = document.getElementById('gameCanvas');
@@ -631,6 +644,9 @@ export function init() {
     setLevelUpCallback(showLevelUpMenu);
     setGameOverCallback(gameOver);
     setKillCountCallback(() => killCount++);
+
+    // Setup audio unlock for mobile browsers
+    setupAudioUnlock();
 
     // Input handling - keyboard
     window.addEventListener('keydown', e => {
