@@ -832,12 +832,24 @@ export class Enemy {
             child.resistances = { ...this.resistances };
             enemies.push(child);
         }
+
+        // Remove the parent cell (it has split into children)
+        const idx = enemies.indexOf(this);
+        if (idx !== -1) enemies.splice(idx, 1);
     }
 
     // Exploder explosion
     triggerExplosion(player) {
         const idx = enemies.indexOf(this);
         if (idx !== -1) enemies.splice(idx, 1);
+
+        // Increment mutation counter for the weapon that killed this enemy
+        if (this.lastDamagedBy) {
+            incrementMutationCounter(this.lastDamagedBy);
+        }
+
+        if (_incrementKillCount) _incrementKillCount();
+        if (_onEnemyDeath) _onEnemyDeath(this.x, this.y, this.size);
 
         Sound.explosion();
 
@@ -848,6 +860,14 @@ export class Enemy {
             const damageMult = 1 - (distToPlayer / (this.explosionRadius + player.size)) * 0.5;
             player.takeDamage(this.explosionDamage * damageMult);
         }
+
+        // Drop XP
+        xpOrbs.push({
+            x: this.x,
+            y: this.y,
+            value: this.xp,
+            size: 5 + Math.min(this.xp, 10),
+        });
 
         // Create explosion visual effect
         for (let i = 0; i < 16; i++) {
