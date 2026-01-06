@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Micro Survivors</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
 
         <div id="ui">
             <div class="ui-bar">
@@ -45,13 +46,13 @@
             <div class="time-select">
                 <p style="margin-bottom: 10px;">Select Time:</p>
                 <div class="time-buttons">
-                    <button class="time-btn" onclick="window.gameInstance.setGameTime(3)">3 min</button>
-                    <button class="time-btn" onclick="window.gameInstance.setGameTime(5)">5 min</button>
-                    <button class="time-btn selected" onclick="window.gameInstance.setGameTime(10)">10 min</button>
-                    <button class="time-btn" onclick="window.gameInstance.setGameTime(15)">15 min</button>
+                    <button class="time-btn" onclick="setGameTime(3)">3 min</button>
+                    <button class="time-btn" onclick="setGameTime(5)">5 min</button>
+                    <button class="time-btn selected" onclick="setGameTime(10)">10 min</button>
+                    <button class="time-btn" onclick="setGameTime(15)">15 min</button>
                 </div>
             </div>
-            <button class="main-btn" onclick="window.gameInstance.startGame()">START</button>
+            <button class="main-btn" onclick="startGame()">START</button>
         </div>
 
         <div id="gameOverScreen" style="display: none;">
@@ -61,10 +62,13 @@
                 <p>Level: <span id="finalLevel">1</span></p>
                 <p>Kills: <span id="finalKills">0</span></p>
             </div>
-            <button class="main-btn" onclick="window.gameInstance.startGame()">RETRY</button>
+            <button class="main-btn" onclick="startGame()">RETRY</button>
         </div>
     </div>
 
-    <script type="module" src="./js/main.js"></script>
+    <script type="module">
+        import { init } from './js/game.js';
+        window.onload = init;
+    </script>
 </body>
 </html>
