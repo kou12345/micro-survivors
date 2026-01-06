@@ -184,6 +184,26 @@ The game uses vanilla ES6 modules served directly. No transpilation, bundling, o
 ### Cloudflare Workers Static Site
 The `wrangler.toml` configures Cloudflare Workers to serve static assets from `./public`. There is no server-side logic - it's purely a static site deployment.
 
+## Documentation Convention
+
+### docs/ フォルダについて
+- **ドキュメントは日本語で記述**
+- **コードとドキュメントは常に同期させる**
+- コードを変更したら、対応するドキュメントも更新すること
+
+### ドキュメント構成
+| ファイル | 内容 |
+|----------|------|
+| `docs/GAME_DESIGN.md` | ゲーム全体のコンセプト・デザイン |
+| `docs/WEAPONS.md` | 武器・パッシブアイテムの仕様 |
+| `docs/ENEMIES.md` | 敵キャラクターの仕様 |
+| `docs/SYSTEMS.md` | ゲームシステム（レベルアップ、ウェーブ等）|
+
+### ドキュメント更新ルール
+1. 新しい武器/敵/システムを追加 → 対応するドキュメントを更新
+2. パラメータを変更 → ドキュメントの数値も更新
+3. 機能を削除 → ドキュメントからも削除
+
 ## Future Improvements (from GAME_DESIGN.md)
 - Additional player characters (T-cell, Macrophage, etc.)
 - More enemy types (parasites, resistant bacteria, boss enemies)
