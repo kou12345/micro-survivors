@@ -4,7 +4,7 @@ import { WEAPONS, PASSIVES } from './weapons.js';
 import { Player, Enemy, setLevelUpCallback, setGameOverCallback, setKillCountCallback, setEnemyDeathCallback } from './entities.js';
 import {
     gameState, setGameState, setPlayer,
-    enemies, xpOrbs, projectiles, effects, camera,
+    enemies, xpOrbs, projectiles, enemyProjectiles, effects, camera,
     createHitEffect
 } from './state.js';
 import {
@@ -45,6 +45,7 @@ function spawnEnemy() {
     const types = ['germ'];
     if (progress > 0.1) types.push('virus');
     if (progress > 0.3) types.push('bacteria');
+    if (progress > 0.2) types.push('spore');
 
     const type = types[Math.floor(Math.random() * types.length)];
 
@@ -72,6 +73,7 @@ function spawnWave(waveNumber) {
     const types = ['germ'];
     if (progress > 0.1) types.push('virus');
     if (progress > 0.3) types.push('bacteria');
+    if (progress > 0.2) types.push('spore');
 
     // Spawn enemies in a circle around the player
     for (let i = 0; i < enemyCount; i++) {
@@ -344,6 +346,28 @@ function update(dt) {
         }
     }
 
+    // Update enemy projectiles
+    for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+        const p = enemyProjectiles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.traveled += Math.hypot(p.vx, p.vy);
+
+        // Check collision with player
+        const dist = Math.hypot(_player.x - p.x, _player.y - p.y);
+        if (dist < _player.size + p.size) {
+            _player.takeDamage(p.damage);
+            createHitEffect(p.x, p.y, p.color);
+            enemyProjectiles.splice(i, 1);
+            continue;
+        }
+
+        // Remove if traveled too far
+        if (p.traveled > p.maxRange) {
+            enemyProjectiles.splice(i, 1);
+        }
+    }
+
     // Update effects
     for (let i = effects.length - 1; i >= 0; i--) {
         const e = effects[i];
@@ -434,6 +458,27 @@ function draw() {
             ctx.arc(sx, sy, p.radius * (1 - p.timer / 1500), 0, Math.PI * 2);
             ctx.stroke();
         }
+    }
+
+    // Draw enemy projectiles
+    for (const p of enemyProjectiles) {
+        const sx = p.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+        const sy = p.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+
+        // Glow effect
+        const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, p.size * 2);
+        glow.addColorStop(0, p.color);
+        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(sx, sy, p.size * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(sx, sy, p.size, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     // Draw enemies
@@ -553,6 +598,7 @@ function startGame() {
     enemies.length = 0;
     xpOrbs.length = 0;
     projectiles.length = 0;
+    enemyProjectiles.length = 0;
     effects.length = 0;
 
     _player = new Player();

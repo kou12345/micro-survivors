@@ -118,4 +118,22 @@ export const ENEMY_TYPES = {
         xp: 50,
         isBoss: true,
     },
+    spore: {
+        name: '胞子',
+        color: '#f39c12',
+        size: 14,
+        hp: 25,
+        speed: 0.6,
+        damage: 5,
+        xp: 8,
+        // Ranged attack properties
+        isRanged: true,
+        attackRange: 200,
+        preferredRange: 150,
+        attackCooldown: 2000,
+        projectileSpeed: 3,
+        projectileDamage: 10,
+        projectileSize: 6,
+        projectileColor: '#e67e22',
+    },
 };

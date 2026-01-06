@@ -6,6 +6,7 @@ export let player = null;
 export let enemies = [];
 export let xpOrbs = [];
 export let projectiles = [];
+export let enemyProjectiles = [];
 export let effects = [];
 export let camera = { x: 0, y: 0 };
 
