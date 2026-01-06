@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 import { WEAPONS, ENEMY_TYPES } from './weapons.js';
 import { Sound } from './sound.js';
 import {
-    enemies, projectiles, effects, xpOrbs, camera,
+    enemies, projectiles, enemyProjectiles, effects, xpOrbs, camera,
     findNearestEnemy, createHitEffect, createDamageText
 } from './state.js';
 
@@ -330,6 +330,17 @@ export class Enemy {
         this.color = def.color;
         this.lastHitBy = {};
         this.wobble = Math.random() * Math.PI * 2;
+
+        // Ranged attack properties
+        this.isRanged = def.isRanged || false;
+        this.attackRange = def.attackRange || 0;
+        this.preferredRange = def.preferredRange || 0;
+        this.attackCooldown = def.attackCooldown || 0;
+        this.projectileSpeed = def.projectileSpeed || 0;
+        this.projectileDamage = def.projectileDamage || 0;
+        this.projectileSize = def.projectileSize || 0;
+        this.projectileColor = def.projectileColor || def.color;
+        this.lastAttack = 0;
     }
 
     update(dt, player) {
@@ -337,14 +348,51 @@ export class Enemy {
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy);
 
-        if (dist > 0) {
-            this.x += (dx / dist) * this.speed;
-            this.y += (dy / dist) * this.speed;
+        if (this.isRanged) {
+            // Ranged enemy behavior
+            const now = performance.now();
+
+            if (dist > this.attackRange) {
+                // Move toward player if too far
+                if (dist > 0) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+            } else if (dist < this.preferredRange * 0.8) {
+                // Move away from player if too close
+                if (dist > 0) {
+                    this.x -= (dx / dist) * this.speed * 0.5;
+                    this.y -= (dy / dist) * this.speed * 0.5;
+                }
+            }
+
+            // Fire projectile if in range and cooldown is ready
+            if (dist <= this.attackRange && now - this.lastAttack > this.attackCooldown) {
+                this.lastAttack = now;
+                const angle = Math.atan2(dy, dx);
+                enemyProjectiles.push({
+                    x: this.x,
+                    y: this.y,
+                    vx: Math.cos(angle) * this.projectileSpeed,
+                    vy: Math.sin(angle) * this.projectileSpeed,
+                    damage: this.projectileDamage,
+                    size: this.projectileSize,
+                    color: this.projectileColor,
+                    traveled: 0,
+                    maxRange: this.attackRange * 1.5,
+                });
+            }
+        } else {
+            // Melee enemy behavior (original)
+            if (dist > 0) {
+                this.x += (dx / dist) * this.speed;
+                this.y += (dy / dist) * this.speed;
+            }
         }
 
         this.wobble += 0.1;
 
-        // Check collision with player
+        // Check collision with player (melee damage)
         if (dist < this.size + player.size) {
             player.takeDamage(this.damage, this.type);
         }
@@ -528,6 +576,40 @@ export class Enemy {
             ctx.beginPath();
             ctx.arc(0, 10, 12, 0.2 * Math.PI, 0.8 * Math.PI);
             ctx.stroke();
+        } else if (this.type === 'spore') {
+            // Mushroom/spore-like appearance
+            ctx.fillStyle = this.color;
+
+            // Main body (fuzzy circle)
+            ctx.beginPath();
+            for (let i = 0; i < 16; i++) {
+                const angle = (Math.PI * 2 / 16) * i;
+                const r = this.size + Math.sin(this.wobble * 2 + i * 0.8) * 2;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Small spore dots around
+            ctx.fillStyle = this.projectileColor;
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI * 2 / 6) * i + this.wobble * 0.3;
+                const dist = this.size + 4;
+                const px = Math.cos(angle) * dist;
+                const py = Math.sin(angle) * dist;
+                ctx.beginPath();
+                ctx.arc(px, py, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Center eye
+            ctx.fillStyle = '#2d3436';
+            ctx.beginPath();
+            ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         ctx.restore();

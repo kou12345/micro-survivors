@@ -61,6 +61,32 @@
 
 ---
 
+### 胞子（Spore）
+
+| 項目 | 値 |
+|------|-----|
+| 見た目 | オレンジの球体（周囲に小胞子） |
+| 色 | #f39c12 |
+| サイズ | 14px |
+| HP | 25 |
+| 移動速度 | 0.6 |
+| 接触ダメージ | 5 |
+| 経験値 | 8 |
+| 攻撃タイプ | 遠距離 |
+| 攻撃射程 | 200px |
+| 好む距離 | 150px |
+| 攻撃間隔 | 2000ms |
+| 弾速 | 3 |
+| 弾ダメージ | 10 |
+| 弾サイズ | 6px |
+| 弾の色 | #e67e22 |
+
+**特徴**: 遠距離攻撃をする敵。一定距離を保ちながら弾を発射する。近づくと後退する。
+
+**出現条件**: ゲーム進行20%以降（約2分後）
+
+---
+
 ## 敵のスケーリング
 
 ### 時間経過によるHP補正
@@ -92,7 +118,7 @@
 
 ## 敵の行動パターン
 
-すべての敵は同じ基本AIを持っています：
+### 近接型（germ, virus, bacteria）
 
 1. **移動**: プレイヤーに向かって直線的に移動
 2. **攻撃**: プレイヤーとの接触時にダメージを与える
@@ -105,6 +131,31 @@ const dy = player.y - this.y;
 const dist = Math.hypot(dx, dy);
 this.x += (dx / dist) * this.speed;
 this.y += (dy / dist) * this.speed;
+```
+
+### 遠距離型（spore）
+
+1. **移動**:
+   - 射程外の場合：プレイヤーに向かって移動
+   - 好む距離より近い場合：プレイヤーから離れる（後退）
+   - 射程内の場合：その場で停止
+2. **攻撃**: 射程内でクールダウン完了後、プレイヤーに向かって弾を発射
+3. **接触ダメージ**: 接触時にも少量のダメージを与える
+4. **死亡**: HPが0になるとXPオーブをドロップ
+
+```javascript
+// 遠距離攻撃ロジック（entities.js より）
+if (dist <= this.attackRange && now - this.lastAttack > this.attackCooldown) {
+    this.lastAttack = now;
+    const angle = Math.atan2(dy, dx);
+    enemyProjectiles.push({
+        x: this.x, y: this.y,
+        vx: Math.cos(angle) * this.projectileSpeed,
+        vy: Math.sin(angle) * this.projectileSpeed,
+        damage: this.projectileDamage,
+        // ...
+    });
+}
 ```
 
 ---
@@ -133,5 +184,7 @@ this.y += (dy / dist) * this.speed;
 
 - 敵定義: `public/js/weapons.js` - `ENEMY_TYPES` オブジェクト
 - 敵クラス: `public/js/entities.js` - `Enemy` クラス
+- 敵の弾: `public/js/state.js` - `enemyProjectiles` 配列
 - スポーンロジック: `public/js/game.js` - `spawnEnemy()`, `spawnWave()`
+- 弾の更新・描画: `public/js/game.js` - `update()`, `draw()`
 - 描画処理: `public/js/entities.js` - `Enemy.draw()`
