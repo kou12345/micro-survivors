@@ -212,8 +212,8 @@ export class Player {
     }
 
     draw(ctx) {
-        const sx = this.x - camera.x + CONFIG.CANVAS_SIZE / 2;
-        const sy = this.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+        const sx = this.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+        const sy = this.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
 
         // Draw player (white blood cell - amoeba-like)
         ctx.save();
@@ -360,8 +360,8 @@ export class Enemy {
     }
 
     draw(ctx, player) {
-        const sx = this.x - camera.x + CONFIG.CANVAS_SIZE / 2;
-        const sy = this.y - camera.y + CONFIG.CANVAS_SIZE / 2;
+        const sx = this.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+        const sy = this.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
 
         ctx.save();
         ctx.translate(sx, sy);
