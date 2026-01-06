@@ -75,6 +75,15 @@ function spawnEnemy() {
         const enemy = new Enemy(type, x, y);
         // Scale HP with time
         enemy.hp *= 1 + progress * 2;
+
+        // Scale with player level (every 5 levels)
+        const levelTier = Math.floor(_player.level / 5);
+        if (levelTier > 0) {
+            enemy.hp *= 1 + levelTier * 0.3;      // +30% HP per tier
+            enemy.damage *= 1 + levelTier * 0.2;  // +20% damage per tier
+            enemy.speed *= 1 + levelTier * 0.1;   // +10% speed per tier
+        }
+
         enemy.maxHp = enemy.hp;
         // Apply mutation resistances
         applyMutationResistances(enemy);
@@ -114,6 +123,15 @@ function spawnWave(waveNumber) {
             const enemy = new Enemy(type, x, y);
             // Scale HP with time and wave number
             enemy.hp *= (1 + progress * 2) * (1 + waveNumber * 0.1);
+
+            // Scale with player level (every 5 levels)
+            const levelTier = Math.floor(_player.level / 5);
+            if (levelTier > 0) {
+                enemy.hp *= 1 + levelTier * 0.3;      // +30% HP per tier
+                enemy.damage *= 1 + levelTier * 0.2;  // +20% damage per tier
+                enemy.speed *= 1 + levelTier * 0.1;   // +10% speed per tier
+            }
+
             enemy.maxHp = enemy.hp;
             // Apply mutation resistances
             applyMutationResistances(enemy);
