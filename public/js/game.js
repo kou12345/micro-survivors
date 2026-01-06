@@ -5,7 +5,8 @@ import { Player, Enemy, setLevelUpCallback, setGameOverCallback, setKillCountCal
 import {
     gameState, setGameState, setPlayer,
     enemies, xpOrbs, projectiles, enemyProjectiles, effects, camera,
-    createHitEffect
+    createHitEffect,
+    getMutationLevel, resetMutationCounters, mutationCounter
 } from './state.js';
 import {
     initBackground, updateBackground, drawBackground,
@@ -42,6 +43,18 @@ let joystick = {
 // Local player reference
 let _player = null;
 
+// Apply mutation resistances to a newly spawned enemy
+function applyMutationResistances(enemy) {
+    // Check each weapon type and apply resistance if mutation level > 0
+    const weaponTypes = ['antibody', 'enzyme', 'atp', 'cilia', 'interferon', 'lysozyme', 'phagocyte'];
+    for (const weaponType of weaponTypes) {
+        const level = getMutationLevel(weaponType);
+        if (level > 0) {
+            enemy.resistances[weaponType] = level;
+        }
+    }
+}
+
 // Spawn enemy
 function spawnEnemy() {
     const progress = gameTime / CONFIG.GAME_DURATION;
@@ -63,6 +76,8 @@ function spawnEnemy() {
         // Scale HP with time
         enemy.hp *= 1 + progress * 2;
         enemy.maxHp = enemy.hp;
+        // Apply mutation resistances
+        applyMutationResistances(enemy);
         enemies.push(enemy);
     }
 }
@@ -100,6 +115,8 @@ function spawnWave(waveNumber) {
             // Scale HP with time and wave number
             enemy.hp *= (1 + progress * 2) * (1 + waveNumber * 0.1);
             enemy.maxHp = enemy.hp;
+            // Apply mutation resistances
+            applyMutationResistances(enemy);
             enemies.push(enemy);
         }
     }
@@ -116,6 +133,8 @@ function spawnWave(waveNumber) {
     boss.maxHp = boss.hp;
     boss.damage *= 1 + waveNumber * 0.2;
     boss.xp *= 1 + waveNumber * 0.3;
+    // Apply mutation resistances
+    applyMutationResistances(boss);
     enemies.push(boss);
 
     Sound.explosion(); // Wave arrival sound
@@ -359,6 +378,30 @@ function showPauseMenu() {
             `;
             passivesDiv.appendChild(div);
         }
+    }
+
+    // Update mutation info
+    const mutationsDiv = document.getElementById('infoMutations');
+    mutationsDiv.innerHTML = '';
+    const MUTATION_LABELS = ['安全', '耐性Lv1', '耐性Lv2', '耐性Lv3'];
+    const weaponTypes = Object.keys(WEAPONS);
+
+    for (const type of weaponTypes) {
+        const def = WEAPONS[type];
+        const kills = mutationCounter[type] || 0;
+        const level = getMutationLevel(type);
+
+        const div = document.createElement('div');
+        div.className = 'mutation-item';
+        div.innerHTML = `
+            <div class="mutation-item-name">
+                <span>${def.emoji}</span>
+                <span>${def.name}</span>
+            </div>
+            <div class="mutation-item-count">${kills}キル</div>
+            <div class="mutation-item-level mutation-level-${level}">${MUTATION_LABELS[level]}</div>
+        `;
+        mutationsDiv.appendChild(div);
     }
 
     // Update synergies info
@@ -636,6 +679,10 @@ function update(dt) {
         } else if (e.type === 'chain') {
             e.elapsed += dt;
             if (e.elapsed >= e.duration) effects.splice(i, 1);
+        } else if (e.type === 'resistText') {
+            e.y += e.vy;
+            e.life -= dt;
+            if (e.life <= 0) effects.splice(i, 1);
         }
     }
 
@@ -879,6 +926,22 @@ function draw() {
             ctx.strokeText(e.damage, sx, sy);
             ctx.fillText(e.damage, sx, sy);
             ctx.restore();
+        } else if (e.type === 'resistText') {
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const progress = 1 - e.life / e.maxLife;
+            const alpha = 1 - progress;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.font = 'bold 12px Arial';
+            ctx.fillStyle = '#ff6b6b';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.textAlign = 'center';
+            ctx.strokeText('耐性!', sx, sy);
+            ctx.fillText('耐性!', sx, sy);
+            ctx.restore();
         } else if (e.type === 'chain') {
             const sx1 = e.x1 - camera.x + CONFIG.CANVAS_WIDTH / 2;
             const sy1 = e.y1 - camera.y + CONFIG.CANVAS_HEIGHT / 2;
@@ -1009,6 +1072,9 @@ function startGame() {
     projectiles.length = 0;
     enemyProjectiles.length = 0;
     effects.length = 0;
+
+    // Reset mutation counters for new game
+    resetMutationCounters();
 
     _player = new Player();
     setPlayer(_player);
