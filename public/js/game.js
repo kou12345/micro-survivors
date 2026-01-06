@@ -95,6 +95,22 @@ function spawnWave(waveNumber) {
         }
     }
 
+    // Spawn boss at random position around player
+    const bossAngle = Math.random() * Math.PI * 2;
+    const bossDist = Math.max(CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT) / 2 + 150;
+    const bossX = _player.x + Math.cos(bossAngle) * bossDist;
+    const bossY = _player.y + Math.sin(bossAngle) * bossDist;
+
+    if (bossX > 0 && bossX < CONFIG.WORLD_SIZE && bossY > 0 && bossY < CONFIG.WORLD_SIZE) {
+        const boss = new Enemy('boss', bossX, bossY);
+        // Scale boss with wave number
+        boss.hp *= 1 + waveNumber * 0.5;
+        boss.maxHp = boss.hp;
+        boss.damage *= 1 + waveNumber * 0.2;
+        boss.xp *= 1 + waveNumber * 0.3;
+        enemies.push(boss);
+    }
+
     Sound.explosion(); // Wave arrival sound
 }
 

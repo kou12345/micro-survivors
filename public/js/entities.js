@@ -405,6 +405,58 @@ export class Enemy {
             ctx.beginPath();
             ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, this.height / 2);
             ctx.fill();
+        } else if (this.type === 'boss') {
+            // Large menacing resistant bacteria boss
+            const pulse = 1 + Math.sin(this.wobble) * 0.1;
+
+            // Outer glow
+            const glow = ctx.createRadialGradient(0, 0, this.size * 0.5, 0, 0, this.size * 1.5);
+            glow.addColorStop(0, 'rgba(224, 86, 253, 0.3)');
+            glow.addColorStop(1, 'rgba(224, 86, 253, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 1.5 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main body - bumpy circular shape
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            for (let i = 0; i < 16; i++) {
+                const angle = (Math.PI * 2 / 16) * i;
+                const r = this.size * pulse + Math.sin(this.wobble * 2 + i * 0.8) * 5;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner darker core
+            ctx.fillStyle = '#9b27af';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Angry eyes
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(-10, -5, 8, 0, Math.PI * 2);
+            ctx.arc(10, -5, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(-10, -5, 4, 0, Math.PI * 2);
+            ctx.arc(10, -5, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Frowning mouth
+            ctx.strokeStyle = '#9b27af';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 10, 12, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.stroke();
         }
 
         ctx.restore();
