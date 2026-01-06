@@ -107,6 +107,119 @@ export const Sound = {
         this.playTone(600, 0.05, 'square');
     },
 
+    // Weapon-specific hit sounds
+    hitAntibody() {
+        if (!this.ctx) return;
+        // Soft bouncy sound for orbiting antibodies
+        this.playTone(500, 0.04, 'sine');
+        this.playTone(700, 0.03, 'sine');
+    },
+
+    hitEnzyme() {
+        if (!this.ctx) return;
+        // Sharp impact sound for projectiles
+        this.playTone(350, 0.06, 'square');
+        this.playTone(250, 0.04, 'square');
+    },
+
+    hitAtp() {
+        if (!this.ctx) return;
+        // Explosion sound (enhanced version)
+        const bufferSize = this.ctx.sampleRate * 0.25;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.5);
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+        noise.connect(filter);
+        filter.connect(this.sfxGain);
+        noise.start();
+        // Add a low boom
+        this.playTone(80, 0.2, 'sine');
+        this.playTone(60, 0.3, 'sine');
+    },
+
+    hitCilia() {
+        if (!this.ctx) return;
+        // Sweeping whoosh sound for whip attack
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.1);
+    },
+
+    // Enemy-specific death sounds
+    deathGerm() {
+        if (!this.ctx) return;
+        // Squishy pop sound for germ
+        this.playTone(400, 0.06, 'sine');
+        setTimeout(() => this.playTone(600, 0.08, 'sine'), 30);
+    },
+
+    deathVirus() {
+        if (!this.ctx) return;
+        // Quick sharp burst for virus
+        this.playTone(800, 0.04, 'square');
+        this.playTone(1000, 0.06, 'square');
+        setTimeout(() => this.playTone(1200, 0.04, 'square'), 40);
+    },
+
+    deathBacteria() {
+        if (!this.ctx) return;
+        // Heavy thud for bacteria
+        this.playTone(150, 0.15, 'triangle');
+        this.playTone(100, 0.2, 'triangle');
+        setTimeout(() => this.playTone(200, 0.1, 'sine'), 80);
+    },
+
+    // Enemy-specific damage sounds (when enemy takes damage but doesn't die)
+    damageGerm() {
+        if (!this.ctx) return;
+        this.playTone(350, 0.03, 'sine');
+    },
+
+    damageVirus() {
+        if (!this.ctx) return;
+        this.playTone(600, 0.03, 'square');
+    },
+
+    damageBacteria() {
+        if (!this.ctx) return;
+        this.playTone(180, 0.05, 'triangle');
+    },
+
+    // Player damage sounds by enemy type
+    playerDamageByGerm() {
+        if (!this.ctx) return;
+        this.playTone(200, 0.1, 'sawtooth');
+        this.playTone(150, 0.15, 'sawtooth');
+    },
+
+    playerDamageByVirus() {
+        if (!this.ctx) return;
+        this.playTone(250, 0.08, 'square');
+        this.playTone(180, 0.12, 'square');
+        setTimeout(() => this.playTone(120, 0.1, 'square'), 50);
+    },
+
+    playerDamageByBacteria() {
+        if (!this.ctx) return;
+        this.playTone(100, 0.2, 'sawtooth');
+        this.playTone(80, 0.25, 'triangle');
+    },
+
     click() {
         if (!this.ctx) return;
         this.playTone(700, 0.05, 'sine');

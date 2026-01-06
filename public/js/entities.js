@@ -106,7 +106,7 @@ export class Player {
                         const dist = Math.hypot(enemy.x - ox, enemy.y - oy);
                         if (dist < enemy.size + 15 && now - (enemy.lastHitBy?.[type] || 0) > 200) {
                             const damage = def.damage * this.damageMultiplier * (1 + weapon.level * 0.2);
-                            enemy.takeDamage(damage);
+                            enemy.takeDamage(damage, 'antibody');
                             enemy.lastHitBy = enemy.lastHitBy || {};
                             enemy.lastHitBy[type] = now;
                             createHitEffect(ox, oy, def.color);
@@ -168,6 +168,7 @@ export class Player {
                 });
 
                 // Hit enemies in arc
+                let hitAny = false;
                 for (const enemy of enemies) {
                     const dx = enemy.x - this.x;
                     const dy = enemy.y - this.y;
@@ -178,22 +179,45 @@ export class Player {
                         while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                         while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                         if (Math.abs(angleDiff) < arc / 2) {
-                            enemy.takeDamage(damage);
+                            enemy.takeDamage(damage, 'cilia');
                             createHitEffect(enemy.x, enemy.y, def.color);
+                            hitAny = true;
                         }
                     }
+                }
+                if (hitAny) {
+                    Sound.hitCilia();
                 }
             }
         }
     }
 
-    takeDamage(amount) {
+    takeDamage(amount, enemyType = null) {
         if (this.invincible > 0) return;
         const damage = amount * (1 - this.defenseMultiplier);
         this.hp -= damage;
         this.invincible = 500;
         createHitEffect(this.x, this.y, '#ff6b6b');
-        Sound.playerDamage();
+
+        // Play enemy-specific player damage sound
+        if (enemyType) {
+            switch (enemyType) {
+                case 'germ':
+                    Sound.playerDamageByGerm();
+                    break;
+                case 'virus':
+                    Sound.playerDamageByVirus();
+                    break;
+                case 'bacteria':
+                    Sound.playerDamageByBacteria();
+                    break;
+                default:
+                    Sound.playerDamage();
+            }
+        } else {
+            Sound.playerDamage();
+        }
+
         if (this.hp <= 0 && _gameOver) {
             _gameOver();
         }
@@ -317,15 +341,45 @@ export class Enemy {
 
         // Check collision with player
         if (dist < this.size + player.size) {
-            player.takeDamage(this.damage);
+            player.takeDamage(this.damage, this.type);
         }
     }
 
-    takeDamage(amount) {
+    takeDamage(amount, weaponType = null) {
         this.hp -= amount;
         createDamageText(this.x, this.y, amount);
+
+        // Play weapon-specific hit sound
+        if (weaponType) {
+            switch (weaponType) {
+                case 'antibody':
+                    Sound.hitAntibody();
+                    break;
+                case 'enzyme':
+                    Sound.hitEnzyme();
+                    break;
+                case 'atp':
+                    Sound.hitAtp();
+                    break;
+                // cilia sound is played once per attack, not per enemy hit
+            }
+        }
+
         if (this.hp <= 0) {
             this.die();
+        } else {
+            // Play enemy-specific damage sound (only if not dying)
+            switch (this.type) {
+                case 'germ':
+                    Sound.damageGerm();
+                    break;
+                case 'virus':
+                    Sound.damageVirus();
+                    break;
+                case 'bacteria':
+                    Sound.damageBacteria();
+                    break;
+            }
         }
     }
 
@@ -334,7 +388,21 @@ export class Enemy {
         if (idx !== -1) enemies.splice(idx, 1);
 
         if (_incrementKillCount) _incrementKillCount();
-        Sound.enemyDeath();
+
+        // Play enemy-specific death sound
+        switch (this.type) {
+            case 'germ':
+                Sound.deathGerm();
+                break;
+            case 'virus':
+                Sound.deathVirus();
+                break;
+            case 'bacteria':
+                Sound.deathBacteria();
+                break;
+            default:
+                Sound.enemyDeath();
+        }
 
         // Drop XP
         xpOrbs.push({
