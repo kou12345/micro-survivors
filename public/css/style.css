@@ -221,6 +221,73 @@ body {
     padding: 10px;
 }
 
+/* Mutation System Styles */
+.mutation-section {
+    background: rgba(255, 100, 100, 0.1);
+    border: 1px solid rgba(255, 100, 100, 0.3);
+}
+
+.mutation-section h3 {
+    color: #ff6b6b;
+    border-bottom-color: rgba(255, 100, 100, 0.3);
+}
+
+.mutation-desc {
+    color: #a0aec0;
+    font-size: 11px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.mutation-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.mutation-item-name {
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mutation-item-count {
+    color: #a0aec0;
+}
+
+.mutation-item-level {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.mutation-level-0 {
+    background: rgba(100, 100, 100, 0.5);
+    color: #888;
+}
+
+.mutation-level-1 {
+    background: rgba(255, 200, 100, 0.3);
+    color: #ffc864;
+}
+
+.mutation-level-2 {
+    background: rgba(255, 150, 100, 0.3);
+    color: #ff9664;
+}
+
+.mutation-level-3 {
+    background: rgba(255, 100, 100, 0.3);
+    color: #ff6464;
+}
+
 /* Wave Warning UI */
 #waveWarning {
     position: absolute;

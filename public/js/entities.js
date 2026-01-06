@@ -3,7 +3,8 @@ import { WEAPONS, ENEMY_TYPES } from './weapons.js';
 import { Sound } from './sound.js';
 import {
     enemies, projectiles, enemyProjectiles, effects, xpOrbs, camera,
-    findNearestEnemy, createHitEffect, createDamageText
+    findNearestEnemy, createHitEffect, createDamageText,
+    incrementMutationCounter, getResistanceValue
 } from './state.js';
 
 // Forward declarations for game functions (set by game.js)
@@ -450,6 +451,10 @@ export class Enemy {
         this.projectileSize = def.projectileSize || 0;
         this.projectileColor = def.projectileColor || def.color;
         this.lastAttack = 0;
+
+        // Mutation/Resistance system
+        this.resistances = {};  // { weaponType: resistanceLevel }
+        this.lastDamagedBy = null;  // Track which weapon killed this enemy
     }
 
     update(dt, player) {
@@ -508,8 +513,34 @@ export class Enemy {
     }
 
     takeDamage(amount, weaponType = null) {
-        this.hp -= amount;
-        createDamageText(this.x, this.y, amount);
+        // Apply resistance if this enemy has resistance to the weapon
+        let finalDamage = amount;
+        let isResisted = false;
+        if (weaponType && this.resistances[weaponType]) {
+            const resistLevel = this.resistances[weaponType];
+            const reduction = getResistanceValue(resistLevel);
+            finalDamage = amount * (1 - reduction);
+            isResisted = true;
+        }
+
+        this.hp -= finalDamage;
+        this.lastDamagedBy = weaponType;
+
+        // Show damage text (with "耐性!" indicator if resisted)
+        if (isResisted) {
+            createDamageText(this.x, this.y, finalDamage);
+            // Add resistance indicator
+            effects.push({
+                type: 'resistText',
+                x: this.x,
+                y: this.y - 25,
+                life: 400,
+                maxLife: 400,
+                vy: -1,
+            });
+        } else {
+            createDamageText(this.x, this.y, finalDamage);
+        }
 
         // Play weapon-specific hit sound
         if (weaponType) {
@@ -545,6 +576,11 @@ export class Enemy {
     die() {
         const idx = enemies.indexOf(this);
         if (idx !== -1) enemies.splice(idx, 1);
+
+        // Increment mutation counter for the weapon that killed this enemy
+        if (this.lastDamagedBy) {
+            incrementMutationCounter(this.lastDamagedBy);
+        }
 
         if (_incrementKillCount) _incrementKillCount();
         if (_onEnemyDeath) _onEnemyDeath(this.x, this.y, this.size);
@@ -729,6 +765,50 @@ export class Enemy {
             ctx.fillRect(sx - 15, sy - this.size - 10, 30, 4);
             ctx.fillStyle = '#e74c3c';
             ctx.fillRect(sx - 15, sy - this.size - 10, 30 * (this.hp / this.maxHp), 4);
+        }
+
+        // Draw resistance shield aura if enemy has any resistance
+        const resistanceCount = Object.keys(this.resistances).length;
+        if (resistanceCount > 0) {
+            // Find highest resistance level for visual intensity
+            const maxResist = Math.max(...Object.values(this.resistances));
+            const shieldAlpha = 0.15 + maxResist * 0.1;
+            const shieldSize = this.size + 8 + maxResist * 3;
+            const pulse = 1 + Math.sin(this.wobble * 2) * 0.1;
+
+            // Shield glow
+            ctx.save();
+            ctx.globalAlpha = shieldAlpha;
+            const gradient = ctx.createRadialGradient(sx, sy, this.size * 0.5, sx, sy, shieldSize * pulse);
+            gradient.addColorStop(0, 'rgba(255, 100, 100, 0)');
+            gradient.addColorStop(0.7, 'rgba(255, 100, 100, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 50, 50, 0.5)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(sx, sy, shieldSize * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Shield ring
+            ctx.strokeStyle = `rgba(255, 80, 80, ${0.4 + maxResist * 0.15})`;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(sx, sy, shieldSize * pulse, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            // Resistance level indicator (small icon)
+            ctx.save();
+            ctx.font = 'bold 10px Arial';
+            ctx.fillStyle = '#ff6b6b';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.textAlign = 'center';
+            const iconY = sy - this.size - 18;
+            ctx.strokeText(`🛡${maxResist}`, sx, iconY);
+            ctx.fillText(`🛡${maxResist}`, sx, iconY);
+            ctx.restore();
         }
     }
 }
