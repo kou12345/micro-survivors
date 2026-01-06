@@ -429,14 +429,22 @@ body {
 }
 
 #gameOverScreen h2 {
-    font-size: 32px;
+    font-size: 36px;
     color: #ff6b6b;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px rgba(255, 107, 107, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 #gameOverScreen .result {
-    color: #a0aec0;
-    margin-bottom: 20px;
+    color: #ffffff;
+    font-size: 18px;
+    margin-bottom: 25px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+    line-height: 1.8;
+}
+
+#gameOverScreen .result p {
+    margin: 8px 0;
 }
 
 .main-btn {
@@ -745,11 +753,11 @@ body {
     }
 
     #gameOverScreen h2 {
-        font-size: 26px;
+        font-size: 28px;
     }
 
     #gameOverScreen .result {
-        font-size: 14px;
+        font-size: 16px;
     }
 }
 
