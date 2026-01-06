@@ -127,7 +127,24 @@ function spawnWave(waveNumber) {
     const bossX = Math.max(50, Math.min(CONFIG.WORLD_SIZE - 50, _player.x + Math.cos(bossAngle) * bossDist));
     const bossY = Math.max(50, Math.min(CONFIG.WORLD_SIZE - 50, _player.y + Math.sin(bossAngle) * bossDist));
 
-    const boss = new Enemy('boss', bossX, bossY);
+    // Select boss type based on wave number
+    const bossTypes = ['boss', 'amoeba_boss', 'cancer_boss', 'virus_boss'];
+    let bossType;
+    if (waveNumber <= 2) {
+        // Early waves: original boss only
+        bossType = 'boss';
+    } else if (waveNumber <= 4) {
+        // Mid waves: original or amoeba boss
+        bossType = Math.random() < 0.5 ? 'boss' : 'amoeba_boss';
+    } else if (waveNumber <= 6) {
+        // Later waves: add cancer boss
+        bossType = bossTypes[Math.floor(Math.random() * 3)];
+    } else {
+        // Late game: all boss types available
+        bossType = bossTypes[Math.floor(Math.random() * bossTypes.length)];
+    }
+
+    const boss = new Enemy(bossType, bossX, bossY);
     // Scale boss with wave number
     boss.hp *= 1 + waveNumber * 0.5;
     boss.maxHp = boss.hp;
