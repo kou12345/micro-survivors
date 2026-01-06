@@ -10,6 +10,7 @@ import {
 let _showLevelUpMenu = null;
 let _gameOver = null;
 let _incrementKillCount = null;
+let _onEnemyDeath = null;
 
 export function setLevelUpCallback(fn) {
     _showLevelUpMenu = fn;
@@ -21,6 +22,10 @@ export function setGameOverCallback(fn) {
 
 export function setKillCountCallback(fn) {
     _incrementKillCount = fn;
+}
+
+export function setEnemyDeathCallback(fn) {
+    _onEnemyDeath = fn;
 }
 
 // Player Class
@@ -385,6 +390,7 @@ export class Enemy {
         if (idx !== -1) enemies.splice(idx, 1);
 
         if (_incrementKillCount) _incrementKillCount();
+        if (_onEnemyDeath) _onEnemyDeath(this.x, this.y, this.size);
 
         // Play enemy-specific death sound
         switch (this.type) {
