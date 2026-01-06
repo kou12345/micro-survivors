@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { WEAPONS, ENEMY_TYPES } from './weapons.js';
+import { WEAPONS, ENEMY_TYPES, SYNERGIES } from './weapons.js';
 import { Sound } from './sound.js';
 import {
     enemies, projectiles, enemyProjectiles, effects, xpOrbs, camera,
@@ -29,6 +29,12 @@ export function setEnemyDeathCallback(fn) {
     _onEnemyDeath = fn;
 }
 
+// Synergy notification callback
+let _onSynergyActivated = null;
+export function setSynergyCallback(fn) {
+    _onSynergyActivated = fn;
+}
+
 // Player Class
 export class Player {
     constructor() {
@@ -49,6 +55,45 @@ export class Player {
         this.cooldownMultiplier = 1;
         this.invincible = 0;
         this.facingAngle = 0;
+
+        // Synergy system
+        this.activeSynergies = {};
+        this.synergyCooldownBonus = 0; // For geneExpression synergy
+        this.motorEnergyTimer = 0; // For motorEnergy synergy speed boost
+    }
+
+    // Check if a synergy is active
+    hasSynergy(synergyId) {
+        return !!this.activeSynergies[synergyId];
+    }
+
+    // Check and update active synergies based on current weapons and passives
+    checkSynergies() {
+        const previousSynergies = { ...this.activeSynergies };
+        this.activeSynergies = {};
+        this.synergyCooldownBonus = 0;
+
+        for (const [id, synergy] of Object.entries(SYNERGIES)) {
+            const reqWeapons = synergy.requires.weapons || [];
+            const reqPassives = synergy.requires.passives || [];
+
+            const hasAllWeapons = reqWeapons.every(w => this.weapons[w]);
+            const hasAllPassives = reqPassives.every(p => this.passives[p]);
+
+            if (hasAllWeapons && hasAllPassives) {
+                this.activeSynergies[id] = true;
+
+                // Apply geneExpression synergy effect
+                if (id === 'geneExpression') {
+                    this.synergyCooldownBonus = 0.15;
+                }
+
+                // Notify if newly activated
+                if (!previousSynergies[id] && _onSynergyActivated) {
+                    _onSynergyActivated(synergy);
+                }
+            }
+        }
     }
 
     update(dt, keys, joystick = null) {
@@ -76,7 +121,14 @@ export class Player {
             this.facingAngle = Math.atan2(dy, dx);
         }
 
-        const speed = CONFIG.PLAYER_SPEED * this.speedMultiplier;
+        // Apply motor energy boost if active
+        let speedBonus = 1;
+        if (this.motorEnergyTimer > 0) {
+            speedBonus = 1.5;
+            this.motorEnergyTimer -= dt;
+        }
+
+        const speed = CONFIG.PLAYER_SPEED * this.speedMultiplier * speedBonus;
         this.x += dx * speed;
         this.y += dy * speed;
 
@@ -95,7 +147,8 @@ export class Player {
 
         for (const [type, weapon] of Object.entries(this.weapons)) {
             const def = WEAPONS[type];
-            const cooldown = def.cooldown * this.cooldownMultiplier;
+            // Apply synergy cooldown bonus from geneExpression
+            const cooldown = def.cooldown * (this.cooldownMultiplier - this.synergyCooldownBonus);
 
             if (type === 'antibody') {
                 weapon.angle += def.speed * (1 + weapon.level * 0.2);
@@ -116,6 +169,23 @@ export class Player {
                             enemy.lastHitBy = enemy.lastHitBy || {};
                             enemy.lastHitBy[type] = now;
                             createHitEffect(ox, oy, def.color);
+
+                            // Synergy: immuneSynapse - slow enemies
+                            if (this.hasSynergy('immuneSynapse')) {
+                                enemy.slowTimer = 2000; // 2 seconds slow
+                                enemy.slowAmount = 0.5; // 50% slow
+                            }
+
+                            // Synergy: ADCC - mark enemies for enzyme critical
+                            if (this.hasSynergy('adcc')) {
+                                enemy.adccMarked = true;
+                                enemy.adccTimer = 5000; // 5 seconds mark
+                            }
+
+                            // Synergy: opsonization - mark for XP bonus on kill
+                            if (this.hasSynergy('opsonization')) {
+                                enemy.opsonized = true;
+                            }
                         }
                     }
                 }
@@ -125,6 +195,11 @@ export class Player {
                 const target = findNearestEnemy(this.x, this.y);
                 const angle = target ? Math.atan2(target.y - this.y, target.x - this.x) : this.facingAngle;
                 const count = 1 + Math.floor(weapon.level / 3);
+
+                // Synergy: enzymeActivation - pierce through enemies
+                const pierce = this.hasSynergy('enzymeActivation');
+                // Synergy: ADCC - critical on marked enemies
+                const hasAdcc = this.hasSynergy('adcc');
 
                 for (let i = 0; i < count; i++) {
                     const spread = (i - (count - 1) / 2) * 0.15;
@@ -139,10 +214,19 @@ export class Player {
                         traveled: 0,
                         color: def.color,
                         size: 6 + weapon.level,
+                        pierce: pierce,
+                        hitEnemies: pierce ? [] : null, // Track hit enemies for pierce
+                        adccCritical: hasAdcc, // ADCC synergy flag
                     });
                 }
             } else if (type === 'atp' && now - weapon.lastAttack > cooldown) {
                 weapon.lastAttack = now;
+
+                // Synergy: energyOverload - chain explosion
+                const chainExplosion = this.hasSynergy('energyOverload');
+                // Synergy: motorEnergy - speed boost after explosion
+                const motorEnergy = this.hasSynergy('motorEnergy');
+
                 projectiles.push({
                     type: 'atp',
                     x: this.x,
@@ -151,6 +235,9 @@ export class Player {
                     radius: def.radius + weapon.level * 15,
                     timer: def.delay,
                     color: def.color,
+                    chainExplosion: chainExplosion,
+                    motorEnergy: motorEnergy,
+                    isChained: false, // Is this a chain explosion?
                 });
             } else if (type === 'cilia' && now - weapon.lastAttack > cooldown) {
                 weapon.lastAttack = now;
@@ -159,6 +246,26 @@ export class Player {
                 const range = def.range + weapon.level * 15;
                 const arc = def.arc + weapon.level * 0.1;
                 const damage = def.damage * this.damageMultiplier * (1 + weapon.level * 0.2);
+
+                // Synergy: coordinatedMovement - dash forward on attack
+                if (this.hasSynergy('coordinatedMovement')) {
+                    const dashDistance = 40;
+                    this.x += Math.cos(baseAngle) * dashDistance;
+                    this.y += Math.sin(baseAngle) * dashDistance;
+                    // Keep within bounds
+                    this.x = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.x));
+                    this.y = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.y));
+                    // Create dash effect
+                    effects.push({
+                        type: 'dash',
+                        x: this.x - Math.cos(baseAngle) * dashDistance,
+                        y: this.y - Math.sin(baseAngle) * dashDistance,
+                        angle: baseAngle,
+                        duration: 300,
+                        elapsed: 0,
+                        color: '#a29bfe',
+                    });
+                }
 
                 // Create whip effect
                 effects.push({
@@ -455,12 +562,35 @@ export class Enemy {
         // Mutation/Resistance system
         this.resistances = {};  // { weaponType: resistanceLevel }
         this.lastDamagedBy = null;  // Track which weapon killed this enemy
+
+        // Synergy effect states
+        this.slowTimer = 0;
+        this.slowAmount = 0;
+        this.adccMarked = false;
+        this.adccTimer = 0;
+        this.opsonized = false;
+        this.lastDamageSource = null; // Track what weapon dealt the last damage
     }
 
     update(dt, player) {
+        // Update synergy timers
+        if (this.slowTimer > 0) {
+            this.slowTimer -= dt;
+        }
+        if (this.adccTimer > 0) {
+            this.adccTimer -= dt;
+            if (this.adccTimer <= 0) {
+                this.adccMarked = false;
+            }
+        }
+
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy);
+
+        // Calculate speed with slow effect
+        const slowMult = this.slowTimer > 0 ? (1 - this.slowAmount) : 1;
+        const currentSpeed = this.speed * slowMult;
 
         if (this.isRanged) {
             // Ranged enemy behavior
@@ -469,14 +599,14 @@ export class Enemy {
             if (dist > this.attackRange) {
                 // Move toward player if too far
                 if (dist > 0) {
-                    this.x += (dx / dist) * this.speed;
-                    this.y += (dy / dist) * this.speed;
+                    this.x += (dx / dist) * currentSpeed;
+                    this.y += (dy / dist) * currentSpeed;
                 }
             } else if (dist < this.preferredRange * 0.8) {
                 // Move away from player if too close
                 if (dist > 0) {
-                    this.x -= (dx / dist) * this.speed * 0.5;
-                    this.y -= (dy / dist) * this.speed * 0.5;
+                    this.x -= (dx / dist) * currentSpeed * 0.5;
+                    this.y -= (dy / dist) * currentSpeed * 0.5;
                 }
             }
 
@@ -499,8 +629,8 @@ export class Enemy {
         } else {
             // Melee enemy behavior (original)
             if (dist > 0) {
-                this.x += (dx / dist) * this.speed;
-                this.y += (dy / dist) * this.speed;
+                this.x += (dx / dist) * currentSpeed;
+                this.y += (dy / dist) * currentSpeed;
             }
         }
 
@@ -525,6 +655,7 @@ export class Enemy {
 
         this.hp -= finalDamage;
         this.lastDamagedBy = weaponType;
+        this.lastDamageSource = weaponType; // Track killing blow source for synergy
 
         // Show damage text (with "耐性!" indicator if resisted)
         if (isResisted) {
@@ -600,12 +731,15 @@ export class Enemy {
                 Sound.enemyDeath();
         }
 
-        // Drop XP
+        // Drop XP (with opsonization bonus only if killed by antibody)
+        const opsonBonus = this.opsonized && this.lastDamageSource === 'antibody';
+        const xpValue = opsonBonus ? Math.floor(this.xp * 1.5) : this.xp;
         xpOrbs.push({
             x: this.x,
             y: this.y,
-            value: this.xp,
-            size: 5 + Math.min(this.xp, 10),
+            value: xpValue,
+            size: 5 + Math.min(xpValue, 10),
+            opsonized: opsonBonus, // For visual effect (only if actually got bonus)
         });
 
         // Death effect
@@ -754,6 +888,44 @@ export class Enemy {
             ctx.fillStyle = '#2d3436';
             ctx.beginPath();
             ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        // Draw synergy effect indicators
+        ctx.save();
+
+        // Slow effect indicator (ice/blue glow)
+        if (this.slowTimer > 0) {
+            ctx.strokeStyle = 'rgba(116, 185, 255, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(sx, sy, this.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // ADCC marked indicator (red target)
+        if (this.adccMarked) {
+            ctx.strokeStyle = 'rgba(255, 107, 107, 0.8)';
+            ctx.lineWidth = 2;
+            // Crosshair
+            ctx.beginPath();
+            ctx.arc(sx, sy, this.size + 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(sx - this.size - 10, sy);
+            ctx.lineTo(sx + this.size + 10, sy);
+            ctx.moveTo(sx, sy - this.size - 10);
+            ctx.lineTo(sx, sy + this.size + 10);
+            ctx.stroke();
+        }
+
+        // Opsonized indicator (antibody marker)
+        if (this.opsonized && !this.adccMarked) {
+            ctx.fillStyle = 'rgba(78, 205, 196, 0.6)';
+            ctx.beginPath();
+            ctx.arc(sx, sy - this.size - 5, 4, 0, Math.PI * 2);
             ctx.fill();
         }
 

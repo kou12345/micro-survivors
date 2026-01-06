@@ -781,3 +781,195 @@ body {
         left: 20px;
     }
 }
+
+/* Synergy Display */
+#synergyDisplay {
+    position: absolute;
+    bottom: 20px;
+    left: 220px;
+    display: flex;
+    gap: 6px;
+}
+
+.synergy-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, rgba(165, 94, 234, 0.4), rgba(78, 205, 196, 0.4));
+    border-radius: 50%;
+    border: 2px solid #a55eea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 10px rgba(165, 94, 234, 0.5);
+    animation: synergyGlow 2s ease-in-out infinite;
+}
+
+@keyframes synergyGlow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(165, 94, 234, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(165, 94, 234, 0.8);
+    }
+}
+
+/* Synergy Popup Notification */
+#synergyPopup {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+#synergyPopup.active {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    animation: synergyPopIn 0.5s ease-out;
+}
+
+@keyframes synergyPopIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-30px) scale(0.8);
+    }
+    50% {
+        transform: translateX(-50%) translateY(5px) scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+}
+
+.synergy-popup-content {
+    background: linear-gradient(135deg, rgba(20, 20, 40, 0.98), rgba(30, 30, 60, 0.98));
+    border: 3px solid #a55eea;
+    border-radius: 16px;
+    padding: 20px 30px;
+    box-shadow:
+        0 0 30px rgba(165, 94, 234, 0.6),
+        inset 0 0 20px rgba(165, 94, 234, 0.2);
+    min-width: 280px;
+    text-align: center;
+}
+
+.synergy-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.synergy-emoji {
+    font-size: 28px;
+}
+
+.synergy-label {
+    color: #a55eea;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.synergy-popup-content .synergy-name {
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-shadow: 0 0 10px rgba(165, 94, 234, 0.5);
+}
+
+.synergy-popup-content .synergy-desc {
+    color: #4ecdc4;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.synergy-popup-content .synergy-science {
+    color: #68d391;
+    font-size: 11px;
+    line-height: 1.5;
+    padding-top: 10px;
+    border-top: 1px solid rgba(165, 94, 234, 0.3);
+}
+
+/* Synergy section in pause menu */
+.synergy-section {
+    background: linear-gradient(135deg, rgba(165, 94, 234, 0.15), rgba(78, 205, 196, 0.1));
+    border-color: rgba(165, 94, 234, 0.4);
+}
+
+.synergy-section h3 {
+    color: #a55eea;
+}
+
+.synergy-item {
+    background: rgba(165, 94, 234, 0.15);
+    border-left: 3px solid #a55eea;
+}
+
+.info-item-science {
+    color: #68d391;
+    font-size: 10px;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* Mobile adjustments for synergy */
+@media (max-width: 600px) {
+    #synergyDisplay {
+        bottom: 160px;
+        left: 140px;
+    }
+
+    .synergy-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    #synergyPopup {
+        top: 80px;
+        width: 90%;
+        left: 50%;
+    }
+
+    .synergy-popup-content {
+        padding: 15px 20px;
+        min-width: auto;
+    }
+
+    .synergy-emoji {
+        font-size: 24px;
+    }
+
+    .synergy-popup-content .synergy-name {
+        font-size: 18px;
+    }
+
+    .synergy-popup-content .synergy-desc {
+        font-size: 12px;
+    }
+
+    .synergy-popup-content .synergy-science {
+        font-size: 10px;
+    }
+
+    .info-item-science {
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 400px) {
+    #synergyDisplay {
+        bottom: 130px;
+        left: 130px;
+    }
+}

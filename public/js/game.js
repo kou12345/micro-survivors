@@ -1,7 +1,7 @@
 import { CONFIG, setGameTime, updateCanvasSize } from './config.js';
 import { Sound } from './sound.js';
-import { WEAPONS, PASSIVES } from './weapons.js';
-import { Player, Enemy, setLevelUpCallback, setGameOverCallback, setKillCountCallback, setEnemyDeathCallback } from './entities.js';
+import { WEAPONS, PASSIVES, SYNERGIES } from './weapons.js';
+import { Player, Enemy, setLevelUpCallback, setGameOverCallback, setKillCountCallback, setEnemyDeathCallback, setSynergyCallback } from './entities.js';
 import {
     gameState, setGameState, setPlayer,
     enemies, xpOrbs, projectiles, enemyProjectiles, effects, camera,
@@ -24,6 +24,9 @@ let killCount = 0;
 let currentWave = 0;
 let nextWaveTime = 0;
 let waveWarningShown = false;
+
+// Synergy notification state
+let synergyNotifications = [];
 
 // Mobile touch controls
 let joystick = {
@@ -254,7 +257,11 @@ function selectUpgrade(choice) {
         PASSIVES[choice.key].effect(_player);
     }
 
+    // Check for newly activated synergies
+    _player.checkSynergies();
+
     updateWeaponDisplay();
+    updateSynergyDisplay();
     document.getElementById('levelUpMenu').style.display = 'none';
     setGameState('playing');
 }
@@ -270,6 +277,48 @@ function updateWeaponDisplay() {
         div.innerHTML = `${def.emoji}<span class="weapon-level">${weapon.level}</span>`;
         display.appendChild(div);
     }
+}
+
+function updateSynergyDisplay() {
+    const display = document.getElementById('synergyDisplay');
+    if (!display) return;
+
+    display.innerHTML = '';
+    for (const [id, active] of Object.entries(_player.activeSynergies)) {
+        if (active) {
+            const synergy = SYNERGIES[id];
+            const div = document.createElement('div');
+            div.className = 'synergy-icon';
+            div.title = `${synergy.name}: ${synergy.desc}`;
+            div.innerHTML = synergy.emoji;
+            display.appendChild(div);
+        }
+    }
+}
+
+function showSynergyNotification(synergy) {
+    // Add to notification queue
+    synergyNotifications.push({
+        synergy: synergy,
+        startTime: performance.now(),
+        duration: 4000, // 4 seconds
+    });
+
+    // Also show popup notification
+    const popup = document.getElementById('synergyPopup');
+    if (popup) {
+        popup.querySelector('.synergy-name').textContent = synergy.name;
+        popup.querySelector('.synergy-desc').textContent = synergy.desc;
+        popup.querySelector('.synergy-emoji').textContent = synergy.emoji;
+        popup.querySelector('.synergy-science').textContent = synergy.science;
+        popup.classList.add('active');
+
+        setTimeout(() => {
+            popup.classList.remove('active');
+        }, 4000);
+    }
+
+    Sound.levelUp(); // Play activation sound
 }
 
 // Pause Menu System
@@ -355,6 +404,31 @@ function showPauseMenu() {
         mutationsDiv.appendChild(div);
     }
 
+    // Update synergies info
+    const synergiesDiv = document.getElementById('infoSynergies');
+    if (synergiesDiv) {
+        synergiesDiv.innerHTML = '';
+        const activeSynergies = Object.entries(_player.activeSynergies).filter(([id, active]) => active);
+        if (activeSynergies.length === 0) {
+            synergiesDiv.innerHTML = '<div class="no-items">シナジーなし</div>';
+        } else {
+            for (const [id, active] of activeSynergies) {
+                const synergy = SYNERGIES[id];
+                const div = document.createElement('div');
+                div.className = 'info-item synergy-item';
+                div.innerHTML = `
+                    <div class="info-item-icon">${synergy.emoji}</div>
+                    <div class="info-item-details">
+                        <div class="info-item-name">${synergy.name}</div>
+                        <div class="info-item-desc">${synergy.desc}</div>
+                        <div class="info-item-science">📚 ${synergy.science}</div>
+                    </div>
+                `;
+                synergiesDiv.appendChild(div);
+            }
+        }
+    }
+
     document.getElementById('pauseMenu').style.display = 'flex';
 }
 
@@ -408,14 +482,36 @@ function update(dt) {
             p.traveled += Math.hypot(p.vx, p.vy);
 
             // Check collision
+            let shouldRemove = false;
             for (const enemy of enemies) {
+                // Skip if already hit this enemy (for pierce)
+                if (p.pierce && p.hitEnemies && p.hitEnemies.includes(enemy)) continue;
+
                 const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
                 if (dist < enemy.size + p.size) {
-                    enemy.takeDamage(p.damage, 'enzyme');
+                    // Calculate damage with ADCC critical bonus
+                    let damage = p.damage;
+                    if (p.adccCritical && enemy.adccMarked) {
+                        damage *= 2; // 2x critical damage on marked enemies
+                        createHitEffect(p.x, p.y, '#ff6b6b'); // Red critical effect
+                    }
+
+                    enemy.takeDamage(damage, 'enzyme');
                     createHitEffect(p.x, p.y, p.color);
-                    projectiles.splice(i, 1);
-                    break;
+
+                    if (p.pierce) {
+                        // Pierce: track hit enemy and continue
+                        p.hitEnemies.push(enemy);
+                    } else {
+                        shouldRemove = true;
+                        break;
+                    }
                 }
+            }
+
+            if (shouldRemove) {
+                projectiles.splice(i, 1);
+                continue;
             }
 
             if (p.traveled > p.range) {
@@ -447,6 +543,32 @@ function update(dt) {
                         color: p.color,
                         size: 8,
                     });
+                }
+
+                // Synergy: motorEnergy - activate speed boost
+                if (p.motorEnergy && !p.isChained) {
+                    _player.motorEnergyTimer = 3000; // 3 seconds speed boost
+                }
+
+                // Synergy: energyOverload - chain explosion
+                if (p.chainExplosion && !p.isChained) {
+                    // Spawn 3 smaller chain explosions
+                    for (let j = 0; j < 3; j++) {
+                        const angle = (Math.PI * 2 / 3) * j + Math.random() * 0.5;
+                        const chainDist = p.radius * 0.8;
+                        projectiles.push({
+                            type: 'atp',
+                            x: p.x + Math.cos(angle) * chainDist,
+                            y: p.y + Math.sin(angle) * chainDist,
+                            damage: p.damage * 0.5, // 50% damage
+                            radius: p.radius * 0.6, // 60% radius
+                            timer: 300, // Quick explosion
+                            color: '#ff7675',
+                            chainExplosion: false,
+                            motorEnergy: false,
+                            isChained: true,
+                        });
+                    }
                 }
 
                 projectiles.splice(i, 1);
@@ -547,6 +669,9 @@ function update(dt) {
         } else if (e.type === 'cilia') {
             e.elapsed += dt;
             if (e.elapsed >= e.duration) effects.splice(i, 1);
+        } else if (e.type === 'dash') {
+            e.elapsed += dt;
+            if (e.elapsed >= e.duration) effects.splice(i, 1);
         } else if (e.type === 'damageText') {
             e.y += e.vy;
             e.life -= dt;
@@ -595,18 +720,35 @@ function draw() {
         const sx = orb.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
         const sy = orb.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
 
+        // Opsonized orbs have golden glow
+        const glowColor = orb.opsonized ? 'rgba(255, 215, 0, 0.8)' : 'rgba(78, 205, 196, 0.8)';
+        const glowColorOut = orb.opsonized ? 'rgba(255, 215, 0, 0)' : 'rgba(78, 205, 196, 0)';
+        const orbColor = orb.opsonized ? '#ffd700' : '#4ecdc4';
+
         const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, orb.size * 2);
-        glow.addColorStop(0, 'rgba(78, 205, 196, 0.8)');
-        glow.addColorStop(1, 'rgba(78, 205, 196, 0)');
+        glow.addColorStop(0, glowColor);
+        glow.addColorStop(1, glowColorOut);
         ctx.fillStyle = glow;
         ctx.beginPath();
         ctx.arc(sx, sy, orb.size * 2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#4ecdc4';
+        ctx.fillStyle = orbColor;
         ctx.beginPath();
         ctx.arc(sx, sy, orb.size, 0, Math.PI * 2);
         ctx.fill();
+
+        // Opsonized orbs have a sparkle
+        if (orb.opsonized) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(sx - orb.size - 2, sy);
+            ctx.lineTo(sx + orb.size + 2, sy);
+            ctx.moveTo(sx, sy - orb.size - 2);
+            ctx.lineTo(sx, sy + orb.size + 2);
+            ctx.stroke();
+        }
     }
 
     // Draw projectiles
@@ -615,10 +757,32 @@ function draw() {
         const sy = p.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
 
         if (p.type === 'enzyme') {
+            // Pierce projectiles have a trail
+            if (p.pierce) {
+                ctx.save();
+                const angle = Math.atan2(p.vy, p.vx);
+                ctx.translate(sx, sy);
+                ctx.rotate(angle);
+                ctx.fillStyle = 'rgba(123, 237, 159, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(-p.size, 0, p.size * 2, p.size * 0.7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
             ctx.fillStyle = p.color;
             ctx.beginPath();
             ctx.arc(sx, sy, p.size, 0, Math.PI * 2);
             ctx.fill();
+
+            // ADCC projectiles have a red glow
+            if (p.adccCritical) {
+                ctx.strokeStyle = 'rgba(255, 107, 107, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(sx, sy, p.size + 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
         } else if (p.type === 'atp') {
             const pulse = 1 + Math.sin(performance.now() / 100) * 0.2;
             ctx.fillStyle = p.color;
@@ -717,6 +881,33 @@ function draw() {
             ctx.closePath();
             ctx.fill();
             ctx.globalAlpha = 1;
+            ctx.restore();
+        } else if (e.type === 'dash') {
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const progress = e.elapsed / e.duration;
+            const alpha = 1 - progress;
+
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.6;
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + Math.cos(e.angle) * 40, sy + Math.sin(e.angle) * 40);
+            ctx.stroke();
+
+            // Dash trail particles
+            for (let i = 0; i < 3; i++) {
+                const t = i / 3;
+                const px = sx + Math.cos(e.angle) * 40 * t;
+                const py = sy + Math.sin(e.angle) * 40 * t;
+                ctx.fillStyle = e.color;
+                ctx.beginPath();
+                ctx.arc(px, py, 3 * (1 - t), 0, Math.PI * 2);
+                ctx.fill();
+            }
             ctx.restore();
         } else if (e.type === 'damageText') {
             const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
@@ -888,6 +1079,8 @@ function startGame() {
     _player = new Player();
     setPlayer(_player);
     updateWeaponDisplay();
+    synergyNotifications = [];
+    updateSynergyDisplay();
 }
 
 function gameOver() {
@@ -1074,6 +1267,7 @@ export function init() {
         // Add ripple effect when enemy dies
         addRipple(x, y, 50 + size * 2, 600);
     });
+    setSynergyCallback(showSynergyNotification);
 
     // Setup audio unlock for mobile browsers
     setupAudioUnlock();
