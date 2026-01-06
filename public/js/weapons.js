@@ -155,8 +155,8 @@ export const SYNERGIES = {
         requires: { weapons: ['cilia'], passives: ['flagellum'] },
         emoji: '🌀',
         color: '#a29bfe',
-        desc: '繊毛攻撃時に前方へダッシュ',
-        science: '繊毛と鞭毛は共に9+2構造の微小管で構成される。ダイニンモータータンパク質がATPを消費して協調的な波動運動を生み出す。',
+        desc: '繊毛攻撃で敵をノックバック',
+        science: '繊毛と鞭毛は共に9+2構造の微小管で構成される。ダイニンモータータンパク質がATPを消費して協調的な波動運動を生み出し、強力な推進力を発生させる。',
     },
     immuneSynapse: {
         id: 'immuneSynapse',

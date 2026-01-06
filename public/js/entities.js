@@ -247,25 +247,8 @@ export class Player {
                 const arc = def.arc + weapon.level * 0.1;
                 const damage = def.damage * this.damageMultiplier * (1 + weapon.level * 0.2);
 
-                // Synergy: coordinatedMovement - dash forward on attack
-                if (this.hasSynergy('coordinatedMovement')) {
-                    const dashDistance = 40;
-                    this.x += Math.cos(baseAngle) * dashDistance;
-                    this.y += Math.sin(baseAngle) * dashDistance;
-                    // Keep within bounds
-                    this.x = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.x));
-                    this.y = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.y));
-                    // Create dash effect
-                    effects.push({
-                        type: 'dash',
-                        x: this.x - Math.cos(baseAngle) * dashDistance,
-                        y: this.y - Math.sin(baseAngle) * dashDistance,
-                        angle: baseAngle,
-                        duration: 300,
-                        elapsed: 0,
-                        color: '#a29bfe',
-                    });
-                }
+                // Synergy: coordinatedMovement - knockback enemies on hit
+                const hasKnockback = this.hasSynergy('coordinatedMovement');
 
                 // Create whip effect
                 effects.push({
@@ -295,6 +278,16 @@ export class Player {
                             enemy.takeDamage(damage, 'cilia');
                             createHitEffect(enemy.x, enemy.y, def.color);
                             hitAny = true;
+
+                            // Synergy: coordinatedMovement - knockback enemy
+                            if (hasKnockback && dist > 0) {
+                                const knockbackDist = 60;
+                                enemy.x += (dx / dist) * knockbackDist;
+                                enemy.y += (dy / dist) * knockbackDist;
+                                // Keep enemy within world bounds
+                                enemy.x = Math.max(enemy.size, Math.min(CONFIG.WORLD_SIZE - enemy.size, enemy.x));
+                                enemy.y = Math.max(enemy.size, Math.min(CONFIG.WORLD_SIZE - enemy.size, enemy.y));
+                            }
                         }
                     }
                 }
