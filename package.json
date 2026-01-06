@@ -1,0 +1,21 @@
+{
+  "name": "micro-survivors",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Micro Survivors - A roguelike survivor action game",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev --local"
+  },
+  "devDependencies": {
+    "wrangler": "^3"
+  },
+  "keywords": [
+    "game",
+    "survivor",
+    "roguelike",
+    "cloudflare-workers"
+  ],
+  "license": "MIT"
+}
