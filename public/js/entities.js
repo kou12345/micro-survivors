@@ -861,12 +861,15 @@ export class Enemy {
             player.takeDamage(this.explosionDamage * damageMult);
         }
 
-        // Drop XP
+        // Drop XP (with opsonization bonus only if killed by antibody)
+        const opsonBonus = this.opsonized && this.lastDamageSource === 'antibody';
+        const xpValue = opsonBonus ? Math.floor(this.xp * 1.5) : this.xp;
         xpOrbs.push({
             x: this.x,
             y: this.y,
-            value: this.xp,
-            size: 5 + Math.min(this.xp, 10),
+            value: xpValue,
+            size: 5 + Math.min(xpValue, 10),
+            opsonized: opsonBonus,
         });
 
         // Create explosion visual effect
