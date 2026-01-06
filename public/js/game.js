@@ -235,6 +235,80 @@ function updateWeaponDisplay() {
     }
 }
 
+// Pause Menu System
+function showPauseMenu() {
+    setGameState('paused');
+    Sound.click();
+
+    // Update player info
+    document.getElementById('infoLevel').textContent = _player.level;
+    document.getElementById('infoHp').textContent = `${Math.round(_player.hp)} / ${Math.round(_player.maxHp)}`;
+
+    // Update weapons info
+    const weaponsDiv = document.getElementById('infoWeapons');
+    weaponsDiv.innerHTML = '';
+    const weaponEntries = Object.entries(_player.weapons);
+    if (weaponEntries.length === 0) {
+        weaponsDiv.innerHTML = '<div class="no-items">武器なし</div>';
+    } else {
+        for (const [type, weapon] of weaponEntries) {
+            const def = WEAPONS[type];
+            const damage = Math.round(def.damage * _player.damageMultiplier);
+            const cooldown = Math.round(def.cooldown * _player.cooldownMultiplier);
+            const div = document.createElement('div');
+            div.className = 'info-item';
+            div.innerHTML = `
+                <div class="info-item-icon">${def.emoji}</div>
+                <div class="info-item-details">
+                    <div class="info-item-name">${def.name}</div>
+                    <div class="info-item-level">Lv.${weapon.level}</div>
+                    <div class="info-item-desc">ダメージ: ${damage} / CD: ${cooldown}ms</div>
+                </div>
+            `;
+            weaponsDiv.appendChild(div);
+        }
+    }
+
+    // Update passives info
+    const passivesDiv = document.getElementById('infoPassives');
+    passivesDiv.innerHTML = '';
+    const passiveEntries = Object.entries(_player.passives);
+    if (passiveEntries.length === 0) {
+        passivesDiv.innerHTML = '<div class="no-items">パッシブなし</div>';
+    } else {
+        for (const [type, count] of passiveEntries) {
+            const def = PASSIVES[type];
+            const div = document.createElement('div');
+            div.className = 'info-item';
+            div.innerHTML = `
+                <div class="info-item-icon">${def.emoji}</div>
+                <div class="info-item-details">
+                    <div class="info-item-name">${def.name}</div>
+                    <div class="info-item-level">x${count}</div>
+                    <div class="info-item-desc">${def.desc}</div>
+                </div>
+            `;
+            passivesDiv.appendChild(div);
+        }
+    }
+
+    document.getElementById('pauseMenu').style.display = 'flex';
+}
+
+function hidePauseMenu() {
+    document.getElementById('pauseMenu').style.display = 'none';
+    setGameState('playing');
+    Sound.click();
+}
+
+function togglePause() {
+    if (gameState === 'playing') {
+        showPauseMenu();
+    } else if (gameState === 'paused') {
+        hidePauseMenu();
+    }
+}
+
 // Game Loop
 function update(dt) {
     if (gameState !== 'playing') return;
@@ -559,6 +633,13 @@ function startGame() {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('levelUpMenu').style.display = 'none';
+    document.getElementById('pauseMenu').style.display = 'none';
+
+    // Show pause button
+    const pauseButton = document.getElementById('pauseButton');
+    if (pauseButton) {
+        pauseButton.classList.add('active');
+    }
 
     // Show joystick on mobile
     const joystickContainer = document.getElementById('joystickContainer');
@@ -598,10 +679,14 @@ function gameOver() {
     Sound.stopBGM();
     Sound.playerDamage();
 
-    // Hide joystick
+    // Hide joystick and pause button
     const joystickContainer = document.getElementById('joystickContainer');
     if (joystickContainer) {
         joystickContainer.classList.remove('active');
+    }
+    const pauseButton = document.getElementById('pauseButton');
+    if (pauseButton) {
+        pauseButton.classList.remove('active');
     }
 
     document.getElementById('finalTime').textContent = document.getElementById('timer').textContent;
@@ -615,10 +700,14 @@ function gameWin() {
     Sound.stopBGM();
     Sound.levelUp();
 
-    // Hide joystick
+    // Hide joystick and pause button
     const joystickContainer = document.getElementById('joystickContainer');
     if (joystickContainer) {
         joystickContainer.classList.remove('active');
+    }
+    const pauseButton = document.getElementById('pauseButton');
+    if (pauseButton) {
+        pauseButton.classList.remove('active');
     }
 
     const screen = document.getElementById('gameOverScreen');
@@ -772,10 +861,30 @@ export function init() {
     // Input handling - keyboard
     window.addEventListener('keydown', e => {
         keys[e.key.toLowerCase()] = true;
+        // Escape key to toggle pause
+        if (e.key === 'Escape') {
+            togglePause();
+        }
     });
     window.addEventListener('keyup', e => {
         keys[e.key.toLowerCase()] = false;
     });
+
+    // Setup pause button
+    const pauseButton = document.getElementById('pauseButton');
+    if (pauseButton) {
+        pauseButton.addEventListener('click', () => {
+            togglePause();
+        });
+    }
+
+    // Setup resume button
+    const resumeButton = document.getElementById('resumeButton');
+    if (resumeButton) {
+        resumeButton.addEventListener('click', () => {
+            hidePauseMenu();
+        });
+    }
 
     // Setup mobile joystick
     setupJoystick();

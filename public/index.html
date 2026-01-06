@@ -21,6 +21,34 @@
 
         <div id="timer">15:00</div>
 
+        <button id="pauseButton">⏸</button>
+
+        <div id="pauseMenu" style="display: none;">
+            <h2>PAUSED</h2>
+            <div id="playerInfo">
+                <div class="info-section">
+                    <h3>ステータス</h3>
+                    <div class="info-row">
+                        <span>レベル:</span>
+                        <span id="infoLevel">1</span>
+                    </div>
+                    <div class="info-row">
+                        <span>体力:</span>
+                        <span id="infoHp">100 / 100</span>
+                    </div>
+                </div>
+                <div class="info-section">
+                    <h3>武器</h3>
+                    <div id="infoWeapons"></div>
+                </div>
+                <div class="info-section">
+                    <h3>パッシブアイテム</h3>
+                    <div id="infoPassives"></div>
+                </div>
+            </div>
+            <button class="main-btn" id="resumeButton">再開</button>
+        </div>
+
         <div id="waveWarning">
             <div class="wave-text">WAVE <span id="waveNumber">1</span></div>
             <div class="wave-subtext">INCOMING!</div>
