@@ -694,6 +694,11 @@ export class Enemy {
     }
 
     takeDamage(amount, weaponType = null) {
+        // Ignore damage if exploder is already in countdown
+        if (this.isExploding) {
+            return;
+        }
+
         // Apply resistance if this enemy has resistance to the weapon
         let finalDamage = amount;
         let isResisted = false;
