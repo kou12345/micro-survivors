@@ -570,6 +570,32 @@ export class Enemy {
         this.adccTimer = 0;
         this.opsonized = false;
         this.lastDamageSource = null; // Track what weapon dealt the last damage
+
+        // Special behavior properties
+        // Cancer cell - splits when damaged
+        this.canSplit = def.canSplit || false;
+        this.splitThreshold = def.splitThreshold || 0.5;
+        this.splitCount = def.splitCount || 2;
+        this.hasSplit = false; // Prevents infinite splitting
+
+        // Parasite - evades attacks
+        this.canEvade = def.canEvade || false;
+        this.evadeDistance = def.evadeDistance || 80;
+        this.evadeCooldown = def.evadeCooldown || 2000;
+        this.evadeSpeed = def.evadeSpeed || 6;
+        this.lastEvadeTime = 0;
+        this.isEvading = false;
+        this.evadeVx = 0;
+        this.evadeVy = 0;
+        this.evadeDuration = 0;
+
+        // Exploder - explodes on death
+        this.explodesOnDeath = def.explodesOnDeath || false;
+        this.explosionRadius = def.explosionRadius || 60;
+        this.explosionDamage = def.explosionDamage || 25;
+        this.explosionDelay = def.explosionDelay || 500;
+        this.isExploding = false; // Prevents movement during explosion countdown
+        this.explosionTimer = 0;
     }
 
     update(dt, player) {
@@ -584,6 +610,16 @@ export class Enemy {
             }
         }
 
+        // Handle exploder countdown (stops all movement)
+        if (this.isExploding) {
+            this.explosionTimer -= dt;
+            if (this.explosionTimer <= 0) {
+                this.triggerExplosion(player);
+            }
+            this.wobble += 0.3; // Faster wobble during countdown
+            return; // Don't move while exploding
+        }
+
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy);
@@ -591,6 +627,21 @@ export class Enemy {
         // Calculate speed with slow effect
         const slowMult = this.slowTimer > 0 ? (1 - this.slowAmount) : 1;
         const currentSpeed = this.speed * slowMult;
+
+        // Handle parasite evasion
+        if (this.isEvading) {
+            this.evadeDuration -= dt;
+            this.x += this.evadeVx * (dt / 16);
+            this.y += this.evadeVy * (dt / 16);
+            // Keep within world bounds
+            this.x = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.x));
+            this.y = Math.max(this.size, Math.min(CONFIG.WORLD_SIZE - this.size, this.y));
+            if (this.evadeDuration <= 0) {
+                this.isEvading = false;
+            }
+            this.wobble += 0.2;
+            return; // Don't do normal movement while evading
+        }
 
         if (this.isRanged) {
             // Ranged enemy behavior
@@ -686,6 +737,20 @@ export class Enemy {
             }
         }
 
+        // Cancer cell splitting
+        if (this.canSplit && !this.hasSplit && this.hp > 0 && this.hp <= this.maxHp * this.splitThreshold) {
+            this.split();
+        }
+
+        // Parasite evasion when hit
+        if (this.canEvade && this.hp > 0) {
+            const now = performance.now();
+            if (now - this.lastEvadeTime > this.evadeCooldown) {
+                this.triggerEvade();
+                this.lastEvadeTime = now;
+            }
+        }
+
         if (this.hp <= 0) {
             this.die();
         } else {
@@ -700,11 +765,127 @@ export class Enemy {
                 case 'bacteria':
                     Sound.damageBacteria();
                     break;
+                case 'cancer':
+                    Sound.damageCancer();
+                    break;
+                case 'parasite':
+                    Sound.damageParasite();
+                    break;
+                case 'exploder':
+                    Sound.damageExploder();
+                    break;
             }
         }
     }
 
+    // Parasite evasion ability
+    triggerEvade() {
+        this.isEvading = true;
+        this.evadeDuration = 200; // 200ms dash
+        // Evade in random direction away from current position
+        const angle = Math.random() * Math.PI * 2;
+        this.evadeVx = Math.cos(angle) * this.evadeSpeed;
+        this.evadeVy = Math.sin(angle) * this.evadeSpeed;
+        // Create evade effect
+        effects.push({
+            type: 'evade',
+            x: this.x,
+            y: this.y,
+            duration: 300,
+            elapsed: 0,
+            color: this.color,
+        });
+        Sound.evade();
+    }
+
+    // Cancer cell split ability
+    split() {
+        this.hasSplit = true;
+        Sound.split();
+
+        // Create split effect
+        effects.push({
+            type: 'split',
+            x: this.x,
+            y: this.y,
+            duration: 400,
+            elapsed: 0,
+            color: this.color,
+        });
+
+        // Spawn smaller copies
+        for (let i = 0; i < this.splitCount; i++) {
+            const angle = (Math.PI * 2 / this.splitCount) * i;
+            const offsetX = Math.cos(angle) * 25;
+            const offsetY = Math.sin(angle) * 25;
+
+            const child = new Enemy('cancer', this.x + offsetX, this.y + offsetY);
+            // Smaller size and reduced stats
+            child.size = this.size * 0.7;
+            child.hp = this.hp * 0.6;
+            child.maxHp = child.hp;
+            child.damage = this.damage * 0.7;
+            child.xp = Math.floor(this.xp * 0.5);
+            child.hasSplit = true; // Prevent infinite splitting
+            child.canSplit = false;
+            // Inherit resistances
+            child.resistances = { ...this.resistances };
+            enemies.push(child);
+        }
+    }
+
+    // Exploder explosion
+    triggerExplosion(player) {
+        const idx = enemies.indexOf(this);
+        if (idx !== -1) enemies.splice(idx, 1);
+
+        Sound.explosion();
+
+        // Check if player is in explosion radius
+        const distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
+        if (distToPlayer < this.explosionRadius + player.size) {
+            // Damage falls off with distance
+            const damageMult = 1 - (distToPlayer / (this.explosionRadius + player.size)) * 0.5;
+            player.takeDamage(this.explosionDamage * damageMult);
+        }
+
+        // Create explosion visual effect
+        for (let i = 0; i < 16; i++) {
+            const angle = (Math.PI * 2 / 16) * i;
+            effects.push({
+                type: 'particle',
+                x: this.x,
+                y: this.y,
+                vx: Math.cos(angle) * 6,
+                vy: Math.sin(angle) * 6,
+                life: 500,
+                maxLife: 500,
+                color: '#00ff00',
+                size: 10,
+            });
+        }
+
+        // Explosion ring effect
+        effects.push({
+            type: 'explosionRing',
+            x: this.x,
+            y: this.y,
+            radius: this.explosionRadius,
+            duration: 400,
+            elapsed: 0,
+            color: '#00ff00',
+        });
+    }
+
     die() {
+        // Exploder starts explosion countdown instead of dying immediately
+        if (this.explodesOnDeath && !this.isExploding) {
+            this.isExploding = true;
+            this.explosionTimer = this.explosionDelay;
+            Sound.exploderWarning();
+            return; // Don't die yet, wait for explosion
+        }
+
         const idx = enemies.indexOf(this);
         if (idx !== -1) enemies.splice(idx, 1);
 
@@ -726,6 +907,15 @@ export class Enemy {
                 break;
             case 'bacteria':
                 Sound.deathBacteria();
+                break;
+            case 'cancer':
+                Sound.deathCancer();
+                break;
+            case 'parasite':
+                Sound.deathParasite();
+                break;
+            case 'exploder':
+                Sound.deathExploder();
                 break;
             default:
                 Sound.enemyDeath();
@@ -889,6 +1079,145 @@ export class Enemy {
             ctx.beginPath();
             ctx.arc(0, 0, 4, 0, Math.PI * 2);
             ctx.fill();
+        } else if (this.type === 'cancer') {
+            // Cancer cell - irregular pink blob with multiple nuclei
+            const pulse = 1 + Math.sin(this.wobble * 1.5) * 0.15;
+
+            // Outer membrane (irregular shape)
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            for (let i = 0; i < 10; i++) {
+                const angle = (Math.PI * 2 / 10) * i;
+                const irregularity = Math.sin(this.wobble * 2 + i * 1.2) * 4;
+                const r = this.size * pulse + irregularity;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Multiple nuclei (characteristic of cancer cells)
+            ctx.fillStyle = '#ff1493';
+            const nucleiCount = this.hasSplit ? 1 : 3;
+            for (let i = 0; i < nucleiCount; i++) {
+                const angle = (Math.PI * 2 / nucleiCount) * i + this.wobble * 0.5;
+                const dist = this.size * 0.4;
+                const nx = Math.cos(angle) * dist;
+                const ny = Math.sin(angle) * dist;
+                ctx.beginPath();
+                ctx.arc(nx, ny, this.size * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Mitotic spindle effect when about to split
+            if (this.canSplit && !this.hasSplit && this.hp <= this.maxHp * 0.6) {
+                ctx.strokeStyle = 'rgba(255, 20, 147, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-this.size, 0);
+                ctx.lineTo(this.size, 0);
+                ctx.stroke();
+            }
+        } else if (this.type === 'parasite') {
+            // Parasite - worm-like golden creature
+            const segments = 5;
+            const segmentSize = this.size * 0.8;
+
+            // Draw body segments
+            ctx.fillStyle = this.color;
+            for (let i = 0; i < segments; i++) {
+                const offset = Math.sin(this.wobble * 3 + i * 0.8) * 3;
+                const segX = -i * segmentSize * 0.6 + offset;
+                const segY = Math.sin(this.wobble * 2 + i) * 2;
+                const size = segmentSize * (1 - i * 0.1);
+                ctx.beginPath();
+                ctx.ellipse(segX, segY, size, size * 0.7, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Head with eyes
+            ctx.fillStyle = '#ffd700';
+            ctx.beginPath();
+            ctx.ellipse(segmentSize * 0.5, 0, segmentSize * 1.2, segmentSize * 0.9, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes (beady and alert)
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(segmentSize * 0.7, -segmentSize * 0.3, 2, 0, Math.PI * 2);
+            ctx.arc(segmentSize * 0.7, segmentSize * 0.3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Evading indicator
+            if (this.isEvading) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size + 8, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        } else if (this.type === 'exploder') {
+            // Exploder - toxic green bacteria with warning signs
+            const pulse = this.isExploding ? 1 + Math.sin(this.wobble * 5) * 0.3 : 1 + Math.sin(this.wobble) * 0.1;
+
+            // Warning glow when about to explode
+            if (this.isExploding) {
+                const warningGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, this.explosionRadius);
+                warningGlow.addColorStop(0, 'rgba(255, 0, 0, 0.4)');
+                warningGlow.addColorStop(0.5, 'rgba(255, 0, 0, 0.2)');
+                warningGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                ctx.fillStyle = warningGlow;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.explosionRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Main body (bumpy toxic blob)
+            ctx.fillStyle = this.isExploding ? '#ff0000' : this.color;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i;
+                const bump = Math.sin(this.wobble * 3 + i * 1.5) * 3;
+                const r = this.size * pulse + bump;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Toxic bubbles
+            ctx.fillStyle = this.isExploding ? '#ffff00' : '#7fff00';
+            for (let i = 0; i < 4; i++) {
+                const angle = (Math.PI * 2 / 4) * i + this.wobble * 0.5;
+                const dist = this.size * 0.5;
+                const bx = Math.cos(angle) * dist;
+                const by = Math.sin(angle) * dist;
+                ctx.beginPath();
+                ctx.arc(bx, by, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Warning symbol when exploding
+            if (this.isExploding) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('!', 0, 0);
+            } else {
+                // Normal eyes
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(-3, -2, 2, 0, Math.PI * 2);
+                ctx.arc(3, -2, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         ctx.restore();

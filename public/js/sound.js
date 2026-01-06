@@ -220,6 +220,103 @@ export const Sound = {
         this.playTone(80, 0.25, 'triangle');
     },
 
+    // Cancer cell sounds
+    damageCancer() {
+        if (!this.ctx) return;
+        // Squishy unstable sound
+        this.playTone(300, 0.04, 'sine');
+        this.playTone(350, 0.03, 'sine');
+    },
+
+    deathCancer() {
+        if (!this.ctx) return;
+        // Wet splitting sound
+        this.playTone(250, 0.08, 'sine');
+        this.playTone(400, 0.06, 'triangle');
+        setTimeout(() => this.playTone(300, 0.1, 'sine'), 40);
+    },
+
+    split() {
+        if (!this.ctx) return;
+        // Cell division sound - warbling split
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+        // Pop sound at the end
+        setTimeout(() => {
+            this.playTone(500, 0.05, 'sine');
+            this.playTone(600, 0.04, 'sine');
+        }, 100);
+    },
+
+    // Parasite sounds
+    damageParasite() {
+        if (!this.ctx) return;
+        // Quick squirmy sound
+        this.playTone(450, 0.03, 'sawtooth');
+    },
+
+    deathParasite() {
+        if (!this.ctx) return;
+        // Squirming death sound
+        this.playTone(500, 0.06, 'sawtooth');
+        this.playTone(400, 0.08, 'sawtooth');
+        setTimeout(() => this.playTone(300, 0.1, 'sawtooth'), 50);
+    },
+
+    evade() {
+        if (!this.ctx) return;
+        // Quick dash/whoosh sound
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.12);
+    },
+
+    // Exploder sounds
+    damageExploder() {
+        if (!this.ctx) return;
+        // Unstable bubbling sound
+        this.playTone(250, 0.04, 'square');
+        this.playTone(280, 0.03, 'square');
+    },
+
+    deathExploder() {
+        if (!this.ctx) return;
+        // Already handled by explosion, just a small sound
+        this.playTone(200, 0.05, 'sine');
+    },
+
+    exploderWarning() {
+        if (!this.ctx) return;
+        // Urgent warning beeps
+        const beep = (delay) => {
+            setTimeout(() => {
+                if (!this.ctx) return;
+                this.playTone(800, 0.08, 'square');
+            }, delay);
+        };
+        beep(0);
+        beep(120);
+        beep(240);
+        beep(360);
+    },
+
     click() {
         if (!this.ctx) return;
         this.playTone(700, 0.05, 'sine');

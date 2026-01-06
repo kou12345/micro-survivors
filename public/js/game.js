@@ -62,6 +62,9 @@ function spawnEnemy() {
     if (progress > 0.1) types.push('virus');
     if (progress > 0.3) types.push('bacteria');
     if (progress > 0.2) types.push('spore');
+    if (progress > 0.25) types.push('cancer');     // Cancer cells appear at 25%
+    if (progress > 0.35) types.push('parasite');   // Parasites appear at 35%
+    if (progress > 0.4) types.push('exploder');    // Exploders appear at 40%
 
     const type = types[Math.floor(Math.random() * types.length)];
 
@@ -92,6 +95,9 @@ function spawnWave(waveNumber) {
     if (progress > 0.1) types.push('virus');
     if (progress > 0.3) types.push('bacteria');
     if (progress > 0.2) types.push('spore');
+    if (progress > 0.25) types.push('cancer');
+    if (progress > 0.35) types.push('parasite');
+    if (progress > 0.4) types.push('exploder');
 
     // Spawn enemies in a circle around the player
     for (let i = 0; i < enemyCount; i++) {
@@ -103,7 +109,13 @@ function spawnWave(waveNumber) {
         if (x > 0 && x < CONFIG.WORLD_SIZE && y > 0 && y < CONFIG.WORLD_SIZE) {
             // Higher waves have more dangerous enemies
             let type;
-            if (waveNumber >= 3 && types.includes('bacteria') && Math.random() < 0.3) {
+            if (waveNumber >= 4 && types.includes('cancer') && Math.random() < 0.25) {
+                type = 'cancer';
+            } else if (waveNumber >= 4 && types.includes('exploder') && Math.random() < 0.2) {
+                type = 'exploder';
+            } else if (waveNumber >= 3 && types.includes('parasite') && Math.random() < 0.2) {
+                type = 'parasite';
+            } else if (waveNumber >= 3 && types.includes('bacteria') && Math.random() < 0.3) {
                 type = 'bacteria';
             } else if (waveNumber >= 2 && types.includes('virus') && Math.random() < 0.4) {
                 type = 'virus';
@@ -683,6 +695,15 @@ function update(dt) {
             e.y += e.vy;
             e.life -= dt;
             if (e.life <= 0) effects.splice(i, 1);
+        } else if (e.type === 'evade') {
+            e.elapsed += dt;
+            if (e.elapsed >= e.duration) effects.splice(i, 1);
+        } else if (e.type === 'split') {
+            e.elapsed += dt;
+            if (e.elapsed >= e.duration) effects.splice(i, 1);
+        } else if (e.type === 'explosionRing') {
+            e.elapsed += dt;
+            if (e.elapsed >= e.duration) effects.splice(i, 1);
         }
     }
 
@@ -969,6 +990,80 @@ function draw() {
             }
             ctx.lineTo(sx2, sy2);
             ctx.stroke();
+
+            ctx.restore();
+        } else if (e.type === 'evade') {
+            // Parasite evade effect - afterimage trail
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const progress = e.elapsed / e.duration;
+            const alpha = (1 - progress) * 0.6;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 15 * (1 + progress), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        } else if (e.type === 'split') {
+            // Cancer cell split effect - expanding ring
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const progress = e.elapsed / e.duration;
+            const alpha = 1 - progress;
+            const radius = 20 + progress * 40;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            // Outer ring
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 3 * (1 - progress);
+            ctx.beginPath();
+            ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner glow
+            const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+            glow.addColorStop(0, `rgba(255, 105, 180, ${alpha * 0.3})`);
+            glow.addColorStop(1, 'rgba(255, 105, 180, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        } else if (e.type === 'explosionRing') {
+            // Exploder explosion ring effect
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const progress = e.elapsed / e.duration;
+            const alpha = 1 - progress;
+            const currentRadius = e.radius * progress;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            // Expanding ring
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 4 * (1 - progress);
+            ctx.beginPath();
+            ctx.arc(sx, sy, currentRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner danger zone
+            const dangerGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, e.radius);
+            dangerGlow.addColorStop(0, `rgba(0, 255, 0, ${alpha * 0.2})`);
+            dangerGlow.addColorStop(0.7, `rgba(255, 0, 0, ${alpha * 0.3})`);
+            dangerGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = dangerGlow;
+            ctx.beginPath();
+            ctx.arc(sx, sy, e.radius * (1 - progress * 0.5), 0, Math.PI * 2);
+            ctx.fill();
 
             ctx.restore();
         }
