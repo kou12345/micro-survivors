@@ -45,17 +45,28 @@ export class Player {
         this.facingAngle = 0;
     }
 
-    update(dt, keys) {
+    update(dt, keys, joystick = null) {
         let dx = 0, dy = 0;
+
+        // Keyboard input
         if (keys['w'] || keys['arrowup']) dy = -1;
         if (keys['s'] || keys['arrowdown']) dy = 1;
         if (keys['a'] || keys['arrowleft']) dx = -1;
         if (keys['d'] || keys['arrowright']) dx = 1;
 
+        // Joystick input (override keyboard if active)
+        if (joystick && joystick.active) {
+            dx = joystick.dx;
+            dy = joystick.dy;
+        }
+
         if (dx !== 0 || dy !== 0) {
             const len = Math.sqrt(dx * dx + dy * dy);
-            dx /= len;
-            dy /= len;
+            // Only normalize if using keyboard (discrete) input
+            if (!joystick || !joystick.active) {
+                dx /= len;
+                dy /= len;
+            }
             this.facingAngle = Math.atan2(dy, dx);
         }
 
