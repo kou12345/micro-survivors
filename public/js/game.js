@@ -256,7 +256,7 @@ function update(dt) {
             for (const enemy of enemies) {
                 const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
                 if (dist < enemy.size + p.size) {
-                    enemy.takeDamage(p.damage);
+                    enemy.takeDamage(p.damage, 'enzyme');
                     createHitEffect(p.x, p.y, p.color);
                     projectiles.splice(i, 1);
                     break;
@@ -270,11 +270,11 @@ function update(dt) {
             p.timer -= dt;
             if (p.timer <= 0) {
                 // Explode
-                Sound.explosion();
+                Sound.hitAtp();
                 for (const enemy of enemies) {
                     const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
                     if (dist < p.radius + enemy.size) {
-                        enemy.takeDamage(p.damage);
+                        enemy.takeDamage(p.damage, 'atp');
                     }
                 }
 
