@@ -145,6 +145,7 @@ function showLevelUpMenu() {
         btn.innerHTML = `
             <div class="name">${choice.emoji} ${choice.name} ${choice.levelText || ''}</div>
             <div class="desc">${choice.desc}</div>
+            <div class="science">📚 ${choice.science}</div>
         `;
         btn.onclick = () => selectUpgrade(choice);
         options.appendChild(btn);
@@ -167,6 +168,7 @@ function generateUpgradeChoices() {
                 desc: def.desc,
                 emoji: def.emoji,
                 levelText: 'NEW!',
+                science: def.science,
             });
         } else if (_player.weapons[type].level < 8) {
             allOptions.push({
@@ -176,6 +178,7 @@ function generateUpgradeChoices() {
                 desc: `レベル ${_player.weapons[type].level + 1} に強化`,
                 emoji: def.emoji,
                 levelText: `Lv.${_player.weapons[type].level} → ${_player.weapons[type].level + 1}`,
+                science: def.science,
             });
         }
     }
@@ -191,6 +194,7 @@ function generateUpgradeChoices() {
                 desc: def.desc,
                 emoji: def.emoji,
                 levelText: count > 0 ? `x${count + 1}` : '',
+                science: def.science,
             });
         }
     }
