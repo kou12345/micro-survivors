@@ -15,6 +15,11 @@ let lastTime = 0;
 let keys = {};
 let killCount = 0;
 
+// Wave system state
+let currentWave = 0;
+let nextWaveTime = 0;
+let waveWarningShown = false;
+
 // Mobile touch controls
 let joystick = {
     active: false,
@@ -51,6 +56,63 @@ function spawnEnemy() {
         enemy.hp *= 1 + progress * 2;
         enemy.maxHp = enemy.hp;
         enemies.push(enemy);
+    }
+}
+
+// Wave system - spawn a wave of enemies
+function spawnWave(waveNumber) {
+    const progress = gameTime / CONFIG.GAME_DURATION;
+    const enemyCount = CONFIG.WAVE_BASE_ENEMIES + (waveNumber - 1) * CONFIG.WAVE_ENEMIES_INCREMENT;
+
+    // Determine available enemy types based on progress
+    const types = ['germ'];
+    if (progress > 0.1) types.push('virus');
+    if (progress > 0.3) types.push('bacteria');
+
+    // Spawn enemies in a circle around the player
+    for (let i = 0; i < enemyCount; i++) {
+        const angle = (Math.PI * 2 / enemyCount) * i + Math.random() * 0.3;
+        const dist = Math.max(CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT) / 2 + 80 + Math.random() * 100;
+        const x = _player.x + Math.cos(angle) * dist;
+        const y = _player.y + Math.sin(angle) * dist;
+
+        if (x > 0 && x < CONFIG.WORLD_SIZE && y > 0 && y < CONFIG.WORLD_SIZE) {
+            // Higher waves have more dangerous enemies
+            let type;
+            if (waveNumber >= 3 && types.includes('bacteria') && Math.random() < 0.3) {
+                type = 'bacteria';
+            } else if (waveNumber >= 2 && types.includes('virus') && Math.random() < 0.4) {
+                type = 'virus';
+            } else {
+                type = types[Math.floor(Math.random() * types.length)];
+            }
+
+            const enemy = new Enemy(type, x, y);
+            // Scale HP with time and wave number
+            enemy.hp *= (1 + progress * 2) * (1 + waveNumber * 0.1);
+            enemy.maxHp = enemy.hp;
+            enemies.push(enemy);
+        }
+    }
+
+    Sound.explosion(); // Wave arrival sound
+}
+
+// Show wave warning UI
+function showWaveWarning(waveNumber) {
+    const warning = document.getElementById('waveWarning');
+    const waveNum = document.getElementById('waveNumber');
+    if (warning && waveNum) {
+        waveNum.textContent = waveNumber;
+        warning.classList.add('active');
+    }
+}
+
+// Hide wave warning UI
+function hideWaveWarning() {
+    const warning = document.getElementById('waveWarning');
+    if (warning) {
+        warning.classList.remove('active');
     }
 }
 
@@ -272,7 +334,25 @@ function update(dt) {
         }
     }
 
-    // Spawn enemies
+    // Wave system - check for incoming waves
+    const timeUntilNextWave = nextWaveTime - gameTime;
+
+    // Show warning before wave
+    if (timeUntilNextWave <= CONFIG.WAVE_WARNING_TIME && timeUntilNextWave > 0 && !waveWarningShown) {
+        waveWarningShown = true;
+        showWaveWarning(currentWave + 1);
+    }
+
+    // Spawn wave when time is up
+    if (gameTime >= nextWaveTime) {
+        currentWave++;
+        spawnWave(currentWave);
+        hideWaveWarning();
+        waveWarningShown = false;
+        nextWaveTime = gameTime + CONFIG.WAVE_INTERVAL;
+    }
+
+    // Spawn regular enemies (reduced rate during wave warning)
     const spawnRate = 1000 - Math.min(gameTime / 1000, 800);
     if (Math.random() < dt / spawnRate) {
         spawnEnemy();
@@ -460,6 +540,12 @@ function startGame() {
     setGameState('playing');
     gameTime = 0;
     killCount = 0;
+
+    // Reset wave system
+    currentWave = 0;
+    nextWaveTime = CONFIG.WAVE_INTERVAL; // First wave after 30 seconds
+    waveWarningShown = false;
+    hideWaveWarning();
 
     // Clear arrays
     enemies.length = 0;
