@@ -1,0 +1,256 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+}
+
+#gameContainer {
+    position: relative;
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 8px #2d3748,
+        0 0 0 12px #4a5568,
+        0 0 30px rgba(0, 255, 200, 0.3);
+}
+
+#gameCanvas {
+    display: block;
+    border-radius: 50%;
+    cursor: none;
+}
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    pointer-events: none;
+}
+
+.ui-bar {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    color: white;
+    font-size: 14px;
+}
+
+#hpBar {
+    width: 200px;
+    height: 20px;
+    background: #333;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid #666;
+}
+
+#hpFill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff6b6b, #ee5a5a);
+    transition: width 0.2s;
+}
+
+#xpBar {
+    width: 200px;
+    height: 12px;
+    background: #333;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 2px solid #666;
+    margin-top: 4px;
+}
+
+#xpFill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ecdc4, #44a08d);
+    transition: width 0.2s;
+}
+
+#timer {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 24px;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#levelUpMenu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 20px;
+    padding: 30px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    border: 3px solid #4ecdc4;
+    box-shadow: 0 0 30px rgba(78, 205, 196, 0.5);
+}
+
+#levelUpMenu h2 {
+    color: #4ecdc4;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.upgrade-btn {
+    width: 250px;
+    padding: 15px;
+    margin: 8px;
+    background: linear-gradient(135deg, #2d3748, #1a202c);
+    border: 2px solid #4a5568;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    pointer-events: auto;
+}
+
+.upgrade-btn:hover {
+    background: linear-gradient(135deg, #4a5568, #2d3748);
+    border-color: #4ecdc4;
+    transform: scale(1.05);
+}
+
+.upgrade-btn .name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #4ecdc4;
+}
+
+.upgrade-btn .desc {
+    font-size: 12px;
+    color: #a0aec0;
+    margin-top: 5px;
+}
+
+#startScreen, #gameOverScreen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#startScreen h1 {
+    font-size: 36px;
+    color: #4ecdc4;
+    text-shadow: 0 0 20px rgba(78, 205, 196, 0.8);
+    margin-bottom: 20px;
+}
+
+#startScreen p {
+    color: #a0aec0;
+    margin-bottom: 30px;
+}
+
+#gameOverScreen h2 {
+    font-size: 32px;
+    color: #ff6b6b;
+    margin-bottom: 10px;
+}
+
+#gameOverScreen .result {
+    color: #a0aec0;
+    margin-bottom: 20px;
+}
+
+.main-btn {
+    padding: 15px 40px;
+    font-size: 18px;
+    background: linear-gradient(135deg, #4ecdc4, #44a08d);
+    border: none;
+    border-radius: 25px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.main-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(78, 205, 196, 0.6);
+}
+
+#weaponDisplay {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+}
+
+.weapon-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    border: 2px solid #4a5568;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.weapon-level {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: #4ecdc4;
+    color: black;
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.time-select {
+    margin: 20px 0;
+}
+
+.time-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.time-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid #4a5568;
+    border-radius: 8px;
+    color: #a0aec0;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.time-btn:hover {
+    border-color: #4ecdc4;
+    color: white;
+}
+
+.time-btn.selected {
+    background: rgba(78, 205, 196, 0.3);
+    border-color: #4ecdc4;
+    color: #4ecdc4;
+}
