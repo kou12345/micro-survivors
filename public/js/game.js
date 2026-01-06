@@ -331,6 +331,10 @@ function update(dt) {
         } else if (e.type === 'cilia') {
             e.elapsed += dt;
             if (e.elapsed >= e.duration) effects.splice(i, 1);
+        } else if (e.type === 'damageText') {
+            e.y += e.vy;
+            e.life -= dt;
+            if (e.life <= 0) effects.splice(i, 1);
         }
     }
 
@@ -488,6 +492,23 @@ function draw() {
             ctx.closePath();
             ctx.fill();
             ctx.globalAlpha = 1;
+            ctx.restore();
+        } else if (e.type === 'damageText') {
+            const sx = e.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy = e.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const progress = 1 - e.life / e.maxLife;
+            const alpha = 1 - progress;
+            const scale = 1 + progress * 0.3;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.font = `bold ${Math.round(16 * scale)}px Arial`;
+            ctx.fillStyle = '#ffeb3b';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            ctx.strokeText(e.damage, sx, sy);
+            ctx.fillText(e.damage, sx, sy);
             ctx.restore();
         }
     }

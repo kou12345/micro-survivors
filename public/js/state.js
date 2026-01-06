@@ -47,3 +47,15 @@ export function createHitEffect(x, y, color) {
         });
     }
 }
+
+export function createDamageText(x, y, damage) {
+    effects.push({
+        type: 'damageText',
+        x: x + (Math.random() - 0.5) * 20,
+        y: y - 10,
+        damage: Math.round(damage),
+        life: 600,
+        maxLife: 600,
+        vy: -1.5,
+    });
+}
