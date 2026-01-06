@@ -751,11 +751,11 @@ export class Enemy {
         this.lastDamagedBy = weaponType;
         this.lastDamageSource = weaponType; // Track killing blow source for synergy
 
-        // Amoeba boss split pattern
+        // Amoeba boss split pattern - check all crossed thresholds
         if (this.bossPattern === 'split' && this.splitThresholds.length > 0) {
             const hpPercent = this.hp / this.maxHp;
-            const nextThreshold = this.splitThresholds[0];
-            if (hpPercent <= nextThreshold) {
+            // Loop to handle multiple threshold crossings from a single large hit
+            while (this.splitThresholds.length > 0 && hpPercent <= this.splitThresholds[0]) {
                 this.splitThresholds.shift(); // Remove used threshold
                 this.performSplit();
             }
