@@ -3,7 +3,7 @@ import { WEAPONS, ENEMY_TYPES } from './weapons.js';
 import { Sound } from './sound.js';
 import {
     enemies, projectiles, effects, xpOrbs, camera,
-    findNearestEnemy, createHitEffect
+    findNearestEnemy, createHitEffect, createDamageText
 } from './state.js';
 
 // Forward declarations for game functions (set by game.js)
@@ -323,6 +323,7 @@ export class Enemy {
 
     takeDamage(amount) {
         this.hp -= amount;
+        createDamageText(this.x, this.y, amount);
         if (this.hp <= 0) {
             this.die();
         }
