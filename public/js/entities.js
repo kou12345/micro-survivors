@@ -358,10 +358,7 @@ export class Enemy {
                 case 'enzyme':
                     Sound.hitEnzyme();
                     break;
-                case 'atp':
-                    Sound.hitAtp();
-                    break;
-                // cilia sound is played once per attack, not per enemy hit
+                // atp and cilia sounds are played once per attack, not per enemy hit
             }
         }
 
