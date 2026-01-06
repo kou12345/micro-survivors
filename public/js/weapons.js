@@ -86,6 +86,82 @@ export const PASSIVES = {
     },
 };
 
+// Synergy Definitions - Scientific combinations
+export const SYNERGIES = {
+    opsonization: {
+        id: 'opsonization',
+        name: 'オプソニン化',
+        requires: { weapons: ['antibody'], passives: ['ribosome'] },
+        emoji: '🎯',
+        color: '#4ecdc4',
+        desc: '抗体で倒した敵からのXP+50%',
+        science: 'オプソニン化は抗体が病原体に結合し、マクロファージなどの食細胞に「食べて」という目印をつけるプロセス。リボソームで合成された抗体がこの機能を担う。',
+    },
+    enzymeActivation: {
+        id: 'enzymeActivation',
+        name: '酵素活性化',
+        requires: { weapons: ['enzyme'], passives: ['mitochondria'] },
+        emoji: '⚡',
+        color: '#7bed9f',
+        desc: '酵素弾が敵を貫通',
+        science: '酵素反応には活性化エネルギーが必要。ミトコンドリアが生産するATPがこのエネルギーを供給し、酵素の触媒活性を維持する。',
+    },
+    energyOverload: {
+        id: 'energyOverload',
+        name: 'エネルギー過負荷',
+        requires: { weapons: ['atp'], passives: ['mitochondria'] },
+        emoji: '💥',
+        color: '#ffa502',
+        desc: 'ATP爆弾が連鎖爆発',
+        science: 'ミトコンドリアはATPの主要な生産工場。電子伝達系とATP合成酵素により、1つのグルコースから最大38個のATPを生成する。',
+    },
+    coordinatedMovement: {
+        id: 'coordinatedMovement',
+        name: '協調運動',
+        requires: { weapons: ['cilia'], passives: ['flagellum'] },
+        emoji: '🌀',
+        color: '#a29bfe',
+        desc: '繊毛攻撃時に前方へダッシュ',
+        science: '繊毛と鞭毛は共に9+2構造の微小管で構成される。ダイニンモータータンパク質がATPを消費して協調的な波動運動を生み出す。',
+    },
+    immuneSynapse: {
+        id: 'immuneSynapse',
+        name: '免疫シナプス',
+        requires: { weapons: ['antibody'], passives: ['membrane'] },
+        emoji: '🔗',
+        color: '#74b9ff',
+        desc: '抗体で攻撃した敵の移動速度低下',
+        science: '免疫シナプスはT細胞と抗原提示細胞の間に形成される特殊な接触面。細胞膜上の受容体が抗体-抗原複合体を認識し、免疫応答を調節する。',
+    },
+    adcc: {
+        id: 'adcc',
+        name: 'ADCC',
+        requires: { weapons: ['enzyme', 'antibody'] },
+        emoji: '💀',
+        color: '#ff6b6b',
+        desc: '抗体が当たった敵に酵素がクリティカル',
+        science: 'ADCC（抗体依存性細胞傷害）は抗体でマークされた細胞をNK細胞が認識し、パーフォリンやグランザイムなどの酵素で破壊するメカニズム。',
+    },
+    geneExpression: {
+        id: 'geneExpression',
+        name: '遺伝子発現促進',
+        requires: { passives: ['nucleus', 'ribosome'] },
+        emoji: '🧬',
+        color: '#a55eea',
+        desc: '全武器クールダウン追加-15%',
+        science: '核膜の核膜孔からmRNAが細胞質へ輸送され、リボソームでタンパク質に翻訳される。この遺伝子発現の中心教義がタンパク質合成を制御する。',
+    },
+    motorEnergy: {
+        id: 'motorEnergy',
+        name: '運動エネルギー変換',
+        requires: { weapons: ['atp'], passives: ['flagellum'] },
+        emoji: '🚀',
+        color: '#fdcb6e',
+        desc: 'ATP爆発後、3秒間移動速度+50%',
+        science: '鞭毛モーターは細菌の回転推進器官で、ATP加水分解またはプロトン勾配によりトルクを生成。毎秒数百回転で細胞を推進させる。',
+    },
+};
+
 // Enemy Definitions
 export const ENEMY_TYPES = {
     germ: {
