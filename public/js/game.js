@@ -253,7 +253,9 @@ function showPauseMenu() {
     } else {
         for (const [type, weapon] of weaponEntries) {
             const def = WEAPONS[type];
-            const damage = Math.round(def.damage * _player.damageMultiplier);
+            // Match actual damage calculation from entities.js
+            const levelMultiplier = type === 'atp' ? 0.3 : 0.2;
+            const damage = Math.round(def.damage * _player.damageMultiplier * (1 + weapon.level * levelMultiplier));
             const cooldown = Math.round(def.cooldown * _player.cooldownMultiplier);
             const div = document.createElement('div');
             div.className = 'info-item';
