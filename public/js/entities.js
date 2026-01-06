@@ -455,6 +455,7 @@ export class Enemy {
         this.adccMarked = false;
         this.adccTimer = 0;
         this.opsonized = false;
+        this.lastDamageSource = null; // Track what weapon dealt the last damage
     }
 
     update(dt, player) {
@@ -529,6 +530,7 @@ export class Enemy {
 
     takeDamage(amount, weaponType = null) {
         this.hp -= amount;
+        this.lastDamageSource = weaponType; // Track killing blow source
         createDamageText(this.x, this.y, amount);
 
         // Play weapon-specific hit sound
@@ -584,14 +586,15 @@ export class Enemy {
                 Sound.enemyDeath();
         }
 
-        // Drop XP (with opsonization bonus if applicable)
-        const xpValue = this.opsonized ? Math.floor(this.xp * 1.5) : this.xp;
+        // Drop XP (with opsonization bonus only if killed by antibody)
+        const opsonBonus = this.opsonized && this.lastDamageSource === 'antibody';
+        const xpValue = opsonBonus ? Math.floor(this.xp * 1.5) : this.xp;
         xpOrbs.push({
             x: this.x,
             y: this.y,
             value: xpValue,
             size: 5 + Math.min(xpValue, 10),
-            opsonized: this.opsonized, // For visual effect
+            opsonized: opsonBonus, // For visual effect (only if actually got bonus)
         });
 
         // Death effect
