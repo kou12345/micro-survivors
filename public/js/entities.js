@@ -193,6 +193,115 @@ export class Player {
                 if (hitAny) {
                     Sound.hitCilia();
                 }
+            } else if (type === 'interferon') {
+                // Interferon - continuous damage aura around player
+                const range = def.range + weapon.level * 15;
+                const damage = def.damage * this.damageMultiplier * (1 + weapon.level * 0.3);
+
+                for (const enemy of enemies) {
+                    const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                    if (dist < range + enemy.size && now - (enemy.lastHitBy?.['interferon'] || 0) > cooldown) {
+                        enemy.takeDamage(damage, 'interferon');
+                        enemy.lastHitBy = enemy.lastHitBy || {};
+                        enemy.lastHitBy['interferon'] = now;
+                        createHitEffect(enemy.x, enemy.y, def.color);
+                    }
+                }
+            } else if (type === 'lysozyme' && now - weapon.lastAttack > cooldown) {
+                // Lysozyme - chain lightning attack
+                weapon.lastAttack = now;
+                const target = findNearestEnemy(this.x, this.y);
+                if (target) {
+                    const range = def.range + weapon.level * 20;
+                    const dist = Math.hypot(target.x - this.x, target.y - this.y);
+                    if (dist < range) {
+                        Sound.shoot();
+                        const chainCount = def.chainCount + Math.floor(weapon.level / 2);
+                        const chainRange = def.chainRange + weapon.level * 10;
+                        const damage = def.damage * this.damageMultiplier * (1 + weapon.level * 0.25);
+
+                        // Create chain effect
+                        const hitEnemies = [target];
+                        let currentEnemy = target;
+                        let prevX = this.x;
+                        let prevY = this.y;
+
+                        // Hit first enemy
+                        currentEnemy.takeDamage(damage, 'lysozyme');
+                        createHitEffect(currentEnemy.x, currentEnemy.y, def.color);
+                        effects.push({
+                            type: 'chain',
+                            x1: prevX,
+                            y1: prevY,
+                            x2: currentEnemy.x,
+                            y2: currentEnemy.y,
+                            duration: 200,
+                            elapsed: 0,
+                            color: def.color,
+                        });
+
+                        // Chain to additional enemies
+                        for (let i = 1; i < chainCount; i++) {
+                            let nextEnemy = null;
+                            let minDist = chainRange;
+
+                            for (const enemy of enemies) {
+                                if (hitEnemies.includes(enemy)) continue;
+                                const d = Math.hypot(enemy.x - currentEnemy.x, enemy.y - currentEnemy.y);
+                                if (d < minDist) {
+                                    minDist = d;
+                                    nextEnemy = enemy;
+                                }
+                            }
+
+                            if (nextEnemy) {
+                                prevX = currentEnemy.x;
+                                prevY = currentEnemy.y;
+                                hitEnemies.push(nextEnemy);
+                                const chainDamage = damage * (1 - i * 0.15); // Damage falloff
+                                nextEnemy.takeDamage(chainDamage, 'lysozyme');
+                                createHitEffect(nextEnemy.x, nextEnemy.y, def.color);
+                                effects.push({
+                                    type: 'chain',
+                                    x1: prevX,
+                                    y1: prevY,
+                                    x2: nextEnemy.x,
+                                    y2: nextEnemy.y,
+                                    duration: 200,
+                                    elapsed: 0,
+                                    color: def.color,
+                                });
+                                currentEnemy = nextEnemy;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else if (type === 'phagocyte' && now - weapon.lastAttack > cooldown) {
+                // Phagocyte - homing projectile
+                weapon.lastAttack = now;
+                Sound.shoot();
+                const target = findNearestEnemy(this.x, this.y);
+                const angle = target ? Math.atan2(target.y - this.y, target.x - this.x) : this.facingAngle;
+                const count = 1 + Math.floor(weapon.level / 4);
+
+                for (let i = 0; i < count; i++) {
+                    const spread = (i - (count - 1) / 2) * 0.3;
+                    projectiles.push({
+                        type: 'phagocyte',
+                        x: this.x,
+                        y: this.y,
+                        angle: angle + spread,
+                        speed: def.speed + weapon.level * 0.3,
+                        damage: def.damage * this.damageMultiplier * (1 + weapon.level * 0.2),
+                        range: def.range + weapon.level * 50,
+                        turnSpeed: def.turnSpeed + weapon.level * 0.01,
+                        traveled: 0,
+                        color: def.color,
+                        size: 8 + weapon.level,
+                    });
+                }
             }
         }
     }
