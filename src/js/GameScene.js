@@ -690,9 +690,32 @@ export class GameScene extends Phaser.Scene {
         let hp = enemy.getData('hp') - amount;
         enemy.setData('hp', hp);
 
+        // Show damage number
+        this.showDamageNumber(enemy.x, enemy.y, Math.floor(amount));
+
         if (hp <= 0) {
             this.killEnemy(enemy);
         }
+    }
+
+    showDamageNumber(x, y, damage) {
+        const text = this.add.text(x, y - 20, damage.toString(), {
+            fontSize: '16px',
+            fontFamily: 'Courier New, monospace',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 2,
+        });
+        text.setOrigin(0.5);
+
+        this.tweens.add({
+            targets: text,
+            y: y - 50,
+            alpha: 0,
+            duration: 600,
+            ease: 'Power2',
+            onComplete: () => text.destroy(),
+        });
     }
 
     killEnemy(enemy) {
