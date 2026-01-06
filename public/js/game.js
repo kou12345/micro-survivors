@@ -1,12 +1,16 @@
 import { CONFIG, setGameTime, updateCanvasSize } from './config.js';
 import { Sound } from './sound.js';
 import { WEAPONS, PASSIVES } from './weapons.js';
-import { Player, Enemy, setLevelUpCallback, setGameOverCallback, setKillCountCallback } from './entities.js';
+import { Player, Enemy, setLevelUpCallback, setGameOverCallback, setKillCountCallback, setEnemyDeathCallback } from './entities.js';
 import {
     gameState, setGameState, setPlayer,
     enemies, xpOrbs, projectiles, effects, camera,
     createHitEffect
 } from './state.js';
+import {
+    initBackground, updateBackground, drawBackground,
+    addRipple, setWaveWarning
+} from './background.js';
 
 // Local state
 let canvas, ctx;
@@ -106,6 +110,7 @@ function showWaveWarning(waveNumber) {
         waveNum.textContent = waveNumber;
         warning.classList.add('active');
     }
+    setWaveWarning(true);
 }
 
 // Hide wave warning UI
@@ -114,6 +119,7 @@ function hideWaveWarning() {
     if (warning) {
         warning.classList.remove('active');
     }
+    setWaveWarning(false);
 }
 
 // Level Up System
@@ -226,6 +232,10 @@ function update(dt) {
     if (gameState !== 'playing') return;
 
     gameTime += dt;
+
+    // Update background with game state
+    const playerHpRatio = _player ? _player.hp / _player.maxHp : 1;
+    updateBackground(dt, gameTime, CONFIG.GAME_DURATION, playerHpRatio);
 
     // Check win condition
     if (gameTime >= CONFIG.GAME_DURATION) {
@@ -364,54 +374,8 @@ function update(dt) {
 }
 
 function draw() {
-    // Clear
-    ctx.fillStyle = '#0a192f';
-    ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-
-    // Draw petri dish background
-    const centerX = CONFIG.CANVAS_WIDTH / 2;
-    const centerY = CONFIG.CANVAS_HEIGHT / 2;
-    const maxRadius = Math.max(CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT) / 2;
-    const gradient = ctx.createRadialGradient(
-        centerX, centerY, 0,
-        centerX, centerY, maxRadius
-    );
-    gradient.addColorStop(0, 'rgba(78, 205, 196, 0.1)');
-    gradient.addColorStop(0.7, 'rgba(78, 205, 196, 0.05)');
-    gradient.addColorStop(1, 'rgba(78, 205, 196, 0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-
-    // Grid
-    ctx.strokeStyle = 'rgba(78, 205, 196, 0.1)';
-    ctx.lineWidth = 1;
-    const gridSize = 50;
-    const offsetX = (camera.x % gridSize);
-    const offsetY = (camera.y % gridSize);
-    for (let x = -offsetX; x < CONFIG.CANVAS_WIDTH; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, CONFIG.CANVAS_HEIGHT);
-        ctx.stroke();
-    }
-    for (let y = -offsetY; y < CONFIG.CANVAS_HEIGHT; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(CONFIG.CANVAS_WIDTH, y);
-        ctx.stroke();
-    }
-
-    // Floating bubbles (background decoration)
-    const time = performance.now() / 2000;
-    ctx.fillStyle = 'rgba(78, 205, 196, 0.1)';
-    for (let i = 0; i < 20; i++) {
-        const bx = ((i * 137 + time * 20) % CONFIG.CANVAS_WIDTH);
-        const by = ((i * 97 + Math.sin(time + i) * 30) % CONFIG.CANVAS_HEIGHT);
-        const br = 10 + (i % 5) * 5;
-        ctx.beginPath();
-        ctx.arc(bx, by, br, 0, Math.PI * 2);
-        ctx.fill();
-    }
+    // Draw interactive background
+    drawBackground(ctx, camera);
 
     // Draw XP orbs
     for (const orb of xpOrbs) {
@@ -567,6 +531,9 @@ function startGame() {
     nextWaveTime = CONFIG.WAVE_INTERVAL; // First wave after 30 seconds
     waveWarningShown = false;
     hideWaveWarning();
+
+    // Initialize background
+    initBackground();
 
     // Clear arrays
     enemies.length = 0;
@@ -751,6 +718,10 @@ export function init() {
     setLevelUpCallback(showLevelUpMenu);
     setGameOverCallback(gameOver);
     setKillCountCallback(() => killCount++);
+    setEnemyDeathCallback((x, y, size) => {
+        // Add ripple effect when enemy dies
+        addRipple(x, y, 50 + size * 2, 600);
+    });
 
     // Setup audio unlock for mobile browsers
     setupAudioUnlock();
