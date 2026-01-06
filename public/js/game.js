@@ -408,6 +408,45 @@ function update(dt) {
 
                 projectiles.splice(i, 1);
             }
+        } else if (p.type === 'phagocyte') {
+            // Homing projectile - find nearest enemy and turn toward it
+            let nearestEnemy = null;
+            let nearestDist = Infinity;
+            for (const enemy of enemies) {
+                const d = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+                if (d < nearestDist) {
+                    nearestDist = d;
+                    nearestEnemy = enemy;
+                }
+            }
+
+            if (nearestEnemy) {
+                const targetAngle = Math.atan2(nearestEnemy.y - p.y, nearestEnemy.x - p.x);
+                let angleDiff = targetAngle - p.angle;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                p.angle += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), p.turnSpeed);
+            }
+
+            p.x += Math.cos(p.angle) * p.speed;
+            p.y += Math.sin(p.angle) * p.speed;
+            p.traveled += p.speed;
+
+            // Check collision with enemies
+            for (const enemy of enemies) {
+                const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+                if (dist < enemy.size + p.size) {
+                    enemy.takeDamage(p.damage, 'phagocyte');
+                    createHitEffect(p.x, p.y, p.color);
+                    projectiles.splice(i, 1);
+                    break;
+                }
+            }
+
+            // Only check range if projectile still exists
+            if (projectiles[i] === p && p.traveled > p.range) {
+                projectiles.splice(i, 1);
+            }
         }
     }
 
@@ -469,6 +508,9 @@ function update(dt) {
             e.y += e.vy;
             e.life -= dt;
             if (e.life <= 0) effects.splice(i, 1);
+        } else if (e.type === 'chain') {
+            e.elapsed += dt;
+            if (e.elapsed >= e.duration) effects.splice(i, 1);
         }
     }
 
@@ -543,6 +585,33 @@ function draw() {
             ctx.beginPath();
             ctx.arc(sx, sy, p.radius * (1 - p.timer / 1500), 0, Math.PI * 2);
             ctx.stroke();
+        } else if (p.type === 'phagocyte') {
+            // Draw homing projectile with tail
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.rotate(p.angle);
+
+            // Tail particles
+            ctx.fillStyle = `rgba(225, 112, 85, 0.3)`;
+            for (let i = 1; i <= 3; i++) {
+                ctx.beginPath();
+                ctx.arc(-i * 6, 0, p.size * (1 - i * 0.2), 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Main body
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye-like highlight
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(p.size * 0.3, -p.size * 0.2, p.size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
         }
     }
 
@@ -619,7 +688,63 @@ function draw() {
             ctx.strokeText(e.damage, sx, sy);
             ctx.fillText(e.damage, sx, sy);
             ctx.restore();
+        } else if (e.type === 'chain') {
+            const sx1 = e.x1 - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy1 = e.y1 - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const sx2 = e.x2 - camera.x + CONFIG.CANVAS_WIDTH / 2;
+            const sy2 = e.y2 - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+            const progress = e.elapsed / e.duration;
+            const alpha = 1 - progress;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 3 * (1 - progress * 0.5);
+            ctx.shadowColor = e.color;
+            ctx.shadowBlur = 10;
+
+            // Draw jagged lightning line
+            ctx.beginPath();
+            ctx.moveTo(sx1, sy1);
+            const segments = 5;
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                const mx = sx1 + (sx2 - sx1) * t + (Math.random() - 0.5) * 20;
+                const my = sy1 + (sy2 - sy1) * t + (Math.random() - 0.5) * 20;
+                ctx.lineTo(mx, my);
+            }
+            ctx.lineTo(sx2, sy2);
+            ctx.stroke();
+
+            ctx.restore();
         }
+    }
+
+    // Draw interferon aura (before player so it appears behind)
+    if (_player.weapons.interferon && gameState !== 'start') {
+        const weapon = _player.weapons.interferon;
+        const def = WEAPONS.interferon;
+        const range = def.range + weapon.level * 15;
+        const sx = _player.x - camera.x + CONFIG.CANVAS_WIDTH / 2;
+        const sy = _player.y - camera.y + CONFIG.CANVAS_HEIGHT / 2;
+        const pulse = 1 + Math.sin(performance.now() / 200) * 0.1;
+
+        // Outer glow
+        const glow = ctx.createRadialGradient(sx, sy, range * 0.3 * pulse, sx, sy, range * pulse);
+        glow.addColorStop(0, 'rgba(0, 206, 201, 0.1)');
+        glow.addColorStop(0.7, 'rgba(0, 206, 201, 0.2)');
+        glow.addColorStop(1, 'rgba(0, 206, 201, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(sx, sy, range * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ring
+        ctx.strokeStyle = `rgba(0, 206, 201, ${0.3 + Math.sin(performance.now() / 150) * 0.1})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, range * pulse, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     // Draw player
