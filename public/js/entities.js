@@ -899,11 +899,15 @@ export class Enemy {
 
     die() {
         // Exploder starts explosion countdown instead of dying immediately
-        if (this.explodesOnDeath && !this.isExploding) {
-            this.isExploding = true;
-            this.explosionTimer = this.explosionDelay;
-            Sound.exploderWarning();
-            return; // Don't die yet, wait for explosion
+        if (this.explodesOnDeath) {
+            if (!this.isExploding) {
+                // Start the countdown
+                this.isExploding = true;
+                this.explosionTimer = this.explosionDelay;
+                Sound.exploderWarning();
+            }
+            // Always return - explosion will handle death
+            return;
         }
 
         const idx = enemies.indexOf(this);
