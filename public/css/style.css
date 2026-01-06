@@ -194,6 +194,15 @@ body {
     margin-top: 5px;
 }
 
+.upgrade-btn .science {
+    font-size: 10px;
+    color: #68d391;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #4a5568;
+    line-height: 1.4;
+}
+
 #startScreen, #gameOverScreen {
     position: absolute;
     top: 50%;
@@ -479,6 +488,12 @@ body {
 
     .upgrade-btn .desc {
         font-size: 11px;
+    }
+
+    .upgrade-btn .science {
+        font-size: 9px;
+        margin-top: 6px;
+        padding-top: 6px;
     }
 
     #gameOverScreen h2 {

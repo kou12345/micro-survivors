@@ -10,6 +10,7 @@ export const WEAPONS = {
         orbits: 2,
         range: 60,
         speed: 0.05,
+        science: '抗体はB細胞が産生するY字型タンパク質。病原体の抗原に結合し、無力化や免疫細胞への目印として機能する。',
     },
     enzyme: {
         name: '酵素弾',
@@ -20,6 +21,7 @@ export const WEAPONS = {
         cooldown: 800,
         speed: 8,
         range: 300,
+        science: '酵素は生体触媒として化学反応を促進する。リゾチームなどの消化酵素は細菌の細胞壁を分解して破壊する。',
     },
     atp: {
         name: 'ATP爆弾',
@@ -30,6 +32,7 @@ export const WEAPONS = {
         cooldown: 2000,
         radius: 80,
         delay: 1500,
+        science: 'ATP（アデノシン三リン酸）は細胞のエネルギー通貨。高エネルギーリン酸結合が加水分解されるとエネルギーを放出する。',
     },
     cilia: {
         name: '繊毛ウィップ',
@@ -40,6 +43,7 @@ export const WEAPONS = {
         cooldown: 1200,
         range: 100,
         arc: Math.PI * 0.8,
+        science: '繊毛は細胞表面から突き出た毛状構造。気道では粘液と共に異物を排出し、感染防御の第一線として働く。',
     },
 };
 
@@ -50,30 +54,35 @@ export const PASSIVES = {
         desc: '攻撃力+15%',
         emoji: '🔋',
         effect: (p) => p.damageMultiplier += 0.15,
+        science: 'ミトコンドリアは「細胞の発電所」。酸化的リン酸化でATPを大量生産し、細胞活動のエネルギー源となる。',
     },
     ribosome: {
         name: 'リボソーム',
         desc: '経験値+20%',
         emoji: '🧬',
         effect: (p) => p.xpMultiplier += 0.2,
+        science: 'リボソームはタンパク質合成の場。mRNAの遺伝情報を読み取り、アミノ酸を連結してタンパク質を作る。',
     },
     membrane: {
         name: '細胞膜強化',
         desc: '被ダメージ-15%',
         emoji: '🛡️',
         effect: (p) => p.defenseMultiplier += 0.15,
+        science: '細胞膜はリン脂質二重層構造。細胞内外を隔て、物質の出入りを選択的に制御するバリアとして機能する。',
     },
     flagellum: {
         name: '鞭毛',
         desc: '移動速度+15%',
         emoji: '🏃',
         effect: (p) => p.speedMultiplier += 0.15,
+        science: '鞭毛は細胞の運動器官。モータータンパク質の回転運動により、細胞を推進させる生体プロペラ。',
     },
     nucleus: {
         name: '核膜',
         desc: 'クールダウン-10%',
         emoji: '⚡',
         effect: (p) => p.cooldownMultiplier -= 0.1,
+        science: '核膜はDNAを保護する二重膜構造。核膜孔を通じてmRNAやタンパク質の輸送を制御する司令塔。',
     },
 };
 
@@ -87,6 +96,7 @@ export const ENEMY_TYPES = {
         speed: 1,
         damage: 5,
         xp: 3,
+        science: '雑菌は環境中に普遍的に存在する微生物の総称。多くは無害だが、免疫低下時に日和見感染を起こすことがある。',
     },
     virus: {
         name: 'ウイルス',
@@ -96,6 +106,7 @@ export const ENEMY_TYPES = {
         speed: 2.5,
         damage: 8,
         xp: 5,
+        science: 'ウイルスは自己複製できない非生物。宿主細胞に侵入してDNA/RNAを注入し、細胞の機構を乗っ取って増殖する。',
     },
     bacteria: {
         name: 'バクテリア',
@@ -107,6 +118,7 @@ export const ENEMY_TYPES = {
         xp: 10,
         width: 30,
         height: 12,
+        science: '細菌は単細胞の原核生物。細胞壁を持ち、二分裂で急速に増殖する。腸内細菌など有益な種も多い。',
     },
     boss: {
         name: '耐性菌ボス',
@@ -117,6 +129,7 @@ export const ENEMY_TYPES = {
         damage: 60,
         xp: 150,
         isBoss: true,
+        science: '薬剤耐性菌は抗生物質が効かない細菌。遺伝子変異や耐性遺伝子の獲得により、治療が困難な感染症を引き起こす。',
     },
     spore: {
         name: '胞子',
