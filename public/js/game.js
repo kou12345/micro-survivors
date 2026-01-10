@@ -593,7 +593,12 @@ function updateAI() {
             const dy = nearestEnemy.y - py;
             const dist = Math.hypot(dx, dy);
 
-            if (dist < optimalDist) {
+            if (dist < 1) {
+                // Enemy overlapping player - pick random escape direction
+                const escapeAngle = Math.random() * Math.PI * 2;
+                targetX = px + Math.cos(escapeAngle) * 100;
+                targetY = py + Math.sin(escapeAngle) * 100;
+            } else if (dist < optimalDist) {
                 // Too close - back away
                 targetX = px - dx / dist * 50;
                 targetY = py - dy / dist * 50;
