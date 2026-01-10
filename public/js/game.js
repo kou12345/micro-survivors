@@ -20,6 +20,9 @@ let lastTime = 0;
 let keys = {};
 let killCount = 0;
 
+// Computer mode (AI auto-play)
+let computerMode = false;
+
 // Wave system state
 let currentWave = 0;
 let nextWaveTime = 0;
@@ -36,6 +39,12 @@ let joystick = {
     startY: 0,
     currentX: 0,
     currentY: 0,
+    dx: 0,
+    dy: 0
+};
+
+// AI control for computer mode
+let aiInput = {
     dx: 0,
     dy: 0
 };
@@ -204,11 +213,29 @@ function hideWaveWarning() {
 function showLevelUpMenu() {
     setGameState('levelup');
     Sound.levelUp();
+
+    const choices = generateUpgradeChoices();
+
+    // No upgrades available - just resume playing
+    if (choices.length === 0) {
+        setGameState('playing');
+        return;
+    }
+
+    // Computer mode: auto-select best upgrade synchronously
+    // Must be synchronous to handle multiple level-ups from single XP grant correctly
+    if (computerMode) {
+        const bestChoice = autoSelectUpgrade(choices);
+        if (bestChoice) {
+            selectUpgrade(bestChoice);
+        }
+        return;
+    }
+
     const menu = document.getElementById('levelUpMenu');
     const options = document.getElementById('upgradeOptions');
     options.innerHTML = '';
 
-    const choices = generateUpgradeChoices();
     choices.forEach(choice => {
         const btn = document.createElement('button');
         btn.className = 'upgrade-btn';
@@ -486,6 +513,183 @@ function togglePause() {
     }
 }
 
+// Computer mode toggle
+function toggleComputerMode() {
+    computerMode = !computerMode;
+    const btn = document.getElementById('computerModeBtn');
+    if (btn) {
+        btn.textContent = computerMode ? '🤖 コンピュータモード: ON' : '🎮 コンピュータモード: OFF';
+        btn.classList.toggle('active', computerMode);
+    }
+    Sound.click?.();
+}
+
+// AI Logic for computer mode
+function updateAI() {
+    if (!computerMode || !_player) return;
+
+    const px = _player.x;
+    const py = _player.y;
+    let targetX = px;
+    let targetY = py;
+
+    // 1. Calculate danger from nearby enemies
+    let dangerX = 0;
+    let dangerY = 0;
+    const dangerRadius = 200;
+
+    for (const enemy of enemies) {
+        const dx = enemy.x - px;
+        const dy = enemy.y - py;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < dangerRadius && dist > 0) {
+            // Flee from enemies - inverse square falloff
+            const threat = (dangerRadius - dist) / dangerRadius;
+            const threatMultiplier = threat * threat * (enemy.damage || 10);
+            dangerX += (dx / dist) * threatMultiplier;
+            dangerY += (dy / dist) * threatMultiplier;
+        }
+    }
+
+    // 2. Find nearest XP orb to collect
+    let nearestOrb = null;
+    let nearestOrbDist = Infinity;
+    for (const orb of xpOrbs) {
+        const dist = Math.hypot(orb.x - px, orb.y - py);
+        if (dist < nearestOrbDist) {
+            nearestOrbDist = dist;
+            nearestOrb = orb;
+        }
+    }
+
+    // 3. Decide action based on danger level
+    const dangerMagnitude = Math.hypot(dangerX, dangerY);
+
+    if (dangerMagnitude > 5) {
+        // High danger - flee from enemies
+        targetX = px - dangerX * 10;
+        targetY = py - dangerY * 10;
+    } else if (nearestOrb && nearestOrbDist < 300) {
+        // Low danger - collect XP
+        targetX = nearestOrb.x;
+        targetY = nearestOrb.y;
+    } else if (enemies.length > 0) {
+        // Medium danger - kite around enemies
+        // Stay near enemies but not too close
+        let nearestEnemy = null;
+        let nearestEnemyDist = Infinity;
+        for (const enemy of enemies) {
+            const dist = Math.hypot(enemy.x - px, enemy.y - py);
+            if (dist < nearestEnemyDist) {
+                nearestEnemyDist = dist;
+                nearestEnemy = enemy;
+            }
+        }
+
+        if (nearestEnemy) {
+            const optimalDist = 150; // Stay at this distance
+            const dx = nearestEnemy.x - px;
+            const dy = nearestEnemy.y - py;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist < 1) {
+                // Enemy overlapping player - pick random escape direction
+                const escapeAngle = Math.random() * Math.PI * 2;
+                targetX = px + Math.cos(escapeAngle) * 100;
+                targetY = py + Math.sin(escapeAngle) * 100;
+            } else if (dist < optimalDist) {
+                // Too close - back away
+                targetX = px - dx / dist * 50;
+                targetY = py - dy / dist * 50;
+            } else if (dist > optimalDist + 100) {
+                // Too far - move closer
+                targetX = nearestEnemy.x;
+                targetY = nearestEnemy.y;
+            } else {
+                // Orbit around enemy
+                const perpX = -dy / dist;
+                const perpY = dx / dist;
+                targetX = px + perpX * 30;
+                targetY = py + perpY * 30;
+            }
+        }
+    }
+
+    // 4. Keep within world bounds
+    const margin = 100;
+    targetX = Math.max(margin, Math.min(CONFIG.WORLD_SIZE - margin, targetX));
+    targetY = Math.max(margin, Math.min(CONFIG.WORLD_SIZE - margin, targetY));
+
+    // 5. Calculate movement direction
+    const moveX = targetX - px;
+    const moveY = targetY - py;
+    const moveDist = Math.hypot(moveX, moveY);
+
+    if (moveDist > 5) {
+        aiInput.dx = moveX / moveDist;
+        aiInput.dy = moveY / moveDist;
+    } else {
+        aiInput.dx = 0;
+        aiInput.dy = 0;
+    }
+}
+
+// AI auto-select upgrade for computer mode
+function autoSelectUpgrade(choices) {
+    if (!choices || choices.length === 0) return null;
+
+    // Priority scoring for AI
+    const scoredChoices = choices.map(choice => {
+        let score = 0;
+
+        if (choice.type === 'weapon') {
+            const weaponCount = Object.keys(_player.weapons).length;
+
+            // Prefer getting new weapons first (up to 3-4)
+            if (!_player.weapons[choice.key]) {
+                score += weaponCount < 3 ? 100 : 50;
+            } else {
+                // Upgrade existing weapons
+                score += 30 + _player.weapons[choice.key].level * 5;
+            }
+
+            // Weapon priorities
+            const weaponPriority = {
+                'antibody': 40, // Good for defense
+                'enzyme': 35,   // Good DPS
+                'atp': 30,      // Area damage
+                'interferon': 25,
+                'phagocyte': 35,
+                'lysozyme': 30,
+                'cilia': 25,
+            };
+            score += weaponPriority[choice.key] || 20;
+        } else if (choice.type === 'passive') {
+            const passiveCount = _player.passives[choice.key] || 0;
+
+            // Passive priorities
+            const passivePriority = {
+                'mitochondria': 50, // Damage boost
+                'ribosome': 45,     // XP boost
+                'flagellum': 40,    // Speed
+                'membrane': 35,     // Defense
+                'nucleus': 30,      // Cooldown
+            };
+            score += passivePriority[choice.key] || 20;
+
+            // Diminishing returns for stacking
+            score -= passiveCount * 10;
+        }
+
+        return { choice, score };
+    });
+
+    // Sort by score and pick best
+    scoredChoices.sort((a, b) => b.score - a.score);
+    return scoredChoices[0].choice;
+}
+
 // Game Loop
 function update(dt) {
     if (gameState !== 'playing') return;
@@ -502,7 +706,16 @@ function update(dt) {
         return;
     }
 
-    _player.update(dt, keys, joystick);
+    // Update AI if in computer mode
+    if (computerMode) {
+        updateAI();
+    }
+
+    // Pass AI input to player when in computer mode
+    const effectiveJoystick = computerMode
+        ? { active: true, dx: aiInput.dx, dy: aiInput.dy }
+        : joystick;
+    _player.update(dt, keys, effectiveJoystick);
 
     // Update camera
     camera.x = _player.x;
@@ -1350,6 +1563,7 @@ export function init() {
     // Expose functions to window for HTML onclick handlers
     window.startGame = startGame;
     window.setGameTime = handleSetGameTime;
+    window.toggleComputerMode = toggleComputerMode;
 
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
