@@ -216,6 +216,12 @@ function showLevelUpMenu() {
 
     const choices = generateUpgradeChoices();
 
+    // No upgrades available - just resume playing
+    if (choices.length === 0) {
+        setGameState('playing');
+        return;
+    }
+
     // Computer mode: auto-select best upgrade synchronously
     // Must be synchronous to handle multiple level-ups from single XP grant correctly
     if (computerMode) {
