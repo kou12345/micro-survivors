@@ -216,14 +216,12 @@ function showLevelUpMenu() {
 
     const choices = generateUpgradeChoices();
 
-    // Computer mode: auto-select best upgrade
+    // Computer mode: auto-select best upgrade synchronously
+    // Must be synchronous to handle multiple level-ups from single XP grant correctly
     if (computerMode) {
         const bestChoice = autoSelectUpgrade(choices);
         if (bestChoice) {
-            // Small delay for visual feedback
-            setTimeout(() => {
-                selectUpgrade(bestChoice);
-            }, 100);
+            selectUpgrade(bestChoice);
         }
         return;
     }
